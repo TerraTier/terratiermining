@@ -16,6 +16,7 @@ public final class MiningConfig {
     private final boolean autoPickup;
     private final int defaultRegenerationDelay;
     private final double baseMiningSpeed;
+    private final int breakCooldownMs;
     private final List<NamespacedKey> customItemPdcKeys;
     private final List<BlockIdentityRule> customBlockIdentities;
     private final Map<String, MiningRule> blockRules;
@@ -31,6 +32,7 @@ public final class MiningConfig {
         boolean autoPickup,
         int defaultRegenerationDelay,
         double baseMiningSpeed,
+        int breakCooldownMs,
         List<NamespacedKey> customItemPdcKeys,
         List<BlockIdentityRule> customBlockIdentities,
         Map<String, MiningRule> blockRules,
@@ -45,6 +47,7 @@ public final class MiningConfig {
         this.autoPickup = autoPickup;
         this.defaultRegenerationDelay = defaultRegenerationDelay;
         this.baseMiningSpeed = baseMiningSpeed;
+        this.breakCooldownMs = breakCooldownMs;
         this.customItemPdcKeys = List.copyOf(customItemPdcKeys);
         this.customBlockIdentities = List.copyOf(customBlockIdentities);
         this.blockRules = Map.copyOf(blockRules);
@@ -87,6 +90,10 @@ public final class MiningConfig {
 
     public double baseMiningSpeed() {
         return baseMiningSpeed;
+    }
+
+    public int breakCooldownMs() {
+        return breakCooldownMs;
     }
 
     public List<NamespacedKey> customItemPdcKeys() {

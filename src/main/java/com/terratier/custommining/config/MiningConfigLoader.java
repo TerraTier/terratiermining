@@ -41,6 +41,7 @@ public final class MiningConfigLoader {
         boolean autoPickup = config.getBoolean("settings.auto-pickup", true);
         int defaultRegenDelay = Math.max(0, config.getInt("settings.default-regeneration-delay", 100));
         double baseSpeed = Math.max(0.0, config.getDouble("settings.base-mining-speed", 1.0));
+        int breakCooldownMs = config.getInt("settings.break-cooldown-ms", 200);
 
         List<NamespacedKey> pdcKeys = loadPdcKeys(config);
         DefinitionSet definitions = loadDefinitions(defaultRegenDelay);
@@ -54,6 +55,7 @@ public final class MiningConfigLoader {
             autoPickup,
             defaultRegenDelay,
             baseSpeed,
+            breakCooldownMs,
             pdcKeys,
             definitions.customBlockIdentities(),
             definitions.blockRules(),

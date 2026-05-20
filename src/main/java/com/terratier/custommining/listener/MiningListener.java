@@ -59,6 +59,11 @@ public final class MiningListener implements Listener {
         service.handleInteract(event);
     }
 
+    @EventHandler(priority = EventPriority.MONITOR, ignoreCancelled = true)
+    public void onDrop(org.bukkit.event.player.PlayerDropItemEvent event) {
+        service.handleDrop(event);
+    }
+
     @EventHandler
     public void onQuit(PlayerQuitEvent event) {
         service.handleQuit(event);

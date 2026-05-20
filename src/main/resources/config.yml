@@ -19,6 +19,10 @@ settings:
   # BLOCK_BREAK_SPEED attribute is higher.
   base-mining-speed: 1.0
 
+  # Short delay between consecutive block breaks (ms).
+  # Prevents "machine gun" mining on instant-regen blocks.
+  break-cooldown-ms: 200
+
   max-mining-distance: 7.0
 
   # Checked in order before item_model/custom_model_data/material fallbacks.
@@ -27,7 +31,6 @@ settings:
     - craftengine:item_id
     - craftengine:custom_item_id
     - terratier:item_id
-    - lowclicker:item_id
 
 # Highly customizable fortune system.
 # Map custom attribute IDs to lists of blocks they affect.

@@ -78,7 +78,7 @@ public final class MiningService {
             public void run() {
                 suppressor.tick(MiningService.this.config);
                 tickSessions();
-                breakCooldowns.entrySet().removeIf(entry -> System.currentTimeMillis() - entry.getValue() > 200);
+                breakCooldowns.entrySet().removeIf(entry -> System.currentTimeMillis() - entry.getValue() > MiningService.this.config.breakCooldownMs());
             }
         }.runTaskTimer(plugin, 1L, 1L);
     }
@@ -264,6 +264,10 @@ public final class MiningService {
         if (event.getAction().name().contains("RIGHT")) {
             interactionCooldowns.put(event.getPlayer().getUniqueId(), System.currentTimeMillis());
         }
+    }
+
+    public void handleDrop(org.bukkit.event.player.PlayerDropItemEvent event) {
+        interactionCooldowns.put(event.getPlayer().getUniqueId(), System.currentTimeMillis());
     }
 
     public void handleQuit(PlayerQuitEvent event) {
@@ -575,8 +579,8 @@ public final class MiningService {
     private void handleDrops(Player player, Location loc, List<ItemStack> drops, boolean autoPickup) {
         for (ItemStack drop : drops) {
             if (autoPickup) {
-                Map<Integer, ItemStack> overflow = player.getInventory().addItem(drop);
-                for (ItemStack item : overflow.values()) popItem(player.getLocation(), item);
+                // ADD TO INVENTORY. IF FULL, OVERFLOW IS DISCARDED (DELETED).
+                player.getInventory().addItem(drop);
             } else {
                 popItem(loc, drop);
             }

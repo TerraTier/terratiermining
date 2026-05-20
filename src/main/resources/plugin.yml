@@ -12,9 +12,6 @@ commands:
       - ttmining
       - ttm
       - terratiermining
-      - lowmining
-      - lcmine
-      - lowclickermining
 permissions:
   terratier.mining.admin:
     description: Allows reloading and debugging the TerraTier mining plugin.
