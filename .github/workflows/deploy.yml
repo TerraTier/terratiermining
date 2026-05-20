@@ -32,9 +32,7 @@ jobs:
           password: ${{ secrets.SFTP_PASS }}
           server: ${{ secrets.SFTP_HOST }}
           port: ${{ secrets.SFTP_PORT }}
-          # Upload everything in build/libs/ (which is only the shadow JAR now)
           local_path: 'build/libs/'
           remote_path: 'plugins/'
-          delete_remote: false
-          # Optimization for speed
-          args: '-o ConnectTimeout=5 -o BatchMode=yes'
+          sftp_only: true
+          delete_remote_files: false
