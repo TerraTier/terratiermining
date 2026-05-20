@@ -12,7 +12,6 @@ final class MiningSession {
     private final int x;
     private final int y;
     private final int z;
-    private final String initialBlockData;
     private double progress;
 
     MiningSession(Player player, Block block) {
@@ -21,7 +20,6 @@ final class MiningSession {
         this.x = block.getX();
         this.y = block.getY();
         this.z = block.getZ();
-        this.initialBlockData = block.getBlockData().getAsString(false);
     }
 
     UUID playerId() {

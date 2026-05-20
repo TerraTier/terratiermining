@@ -46,6 +46,7 @@ final class MiningCalculator {
         double base = instance.getBaseValue();
         double value = base;
 
+        // Op 0: Addition
         for (AttributeModifier modifier : instance.getModifiers()) {
             if (vanillaSuppressionKey.equals(modifier.getKey())) continue;
             if (modifier.getOperation() == AttributeModifier.Operation.ADD_NUMBER) {
@@ -53,6 +54,7 @@ final class MiningCalculator {
             }
         }
 
+        // Op 1: Scalar Addition
         for (AttributeModifier modifier : instance.getModifiers()) {
             if (vanillaSuppressionKey.equals(modifier.getKey())) continue;
             if (modifier.getOperation() == AttributeModifier.Operation.ADD_SCALAR) {
@@ -60,10 +62,11 @@ final class MiningCalculator {
             }
         }
 
+        // Op 2: Multiplicative
         for (AttributeModifier modifier : instance.getModifiers()) {
             if (vanillaSuppressionKey.equals(modifier.getKey())) continue;
             if (modifier.getOperation() == AttributeModifier.Operation.MULTIPLY_SCALAR_1) {
-                value *= 1.0 + modifier.getAmount();
+                value *= (1.0 + modifier.getAmount());
             }
         }
 

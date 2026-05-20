@@ -2,7 +2,10 @@
 # These starter definitions are active out of the box.
 
 blocks:
-  minecraft:wheat:
+  minecraft:wheat[age=7]:
+    material: minecraft:wheat
+    block-data-contains:
+      - "age=7"
     strength: 0.4
     tool: any
     min-tier: 0

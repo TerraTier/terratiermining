@@ -23,53 +23,55 @@ final class BlockRegenerationManager {
     boolean isRegenerating(Location loc) {
         return regeneratingLocations.contains(loc);
     }
-void queueRegeneration(Block block, BlockData originalData, MiningRule rule, Runnable onComplete) {
-    if (!rule.canRegenerate()) return;
 
-    Location loc = block.getLocation().clone();
-    regeneratingLocations.add(loc);
+    void queueRegeneration(Block block, BlockData originalData, MiningRule rule, Runnable onComplete) {
+        if (!rule.canRegenerate()) return;
 
-    BlockData placeholder = null;
+        Location loc = block.getLocation().clone();
+        regeneratingLocations.add(loc);
 
-    // 1. Try custom placeholder from config
-    if (rule.regenerationPlaceholder() != null && !rule.regenerationPlaceholder().isBlank()) {
-        try {
-            placeholder = Bukkit.createBlockData(rule.regenerationPlaceholder());
-        } catch (IllegalArgumentException e) {
-            plugin.getLogger().warning("Invalid regeneration-placeholder for " + rule.id() + ": " + rule.regenerationPlaceholder());
+        BlockData placeholder = null;
+
+        // 1. Try custom placeholder from config
+        if (rule.regenerationPlaceholder() != null && !rule.regenerationPlaceholder().isBlank()) {
+            try {
+                placeholder = Bukkit.createBlockData(rule.regenerationPlaceholder());
+            } catch (IllegalArgumentException e) {
+                plugin.getLogger().warning("Invalid regeneration-placeholder for " + rule.id() + ": " + rule.regenerationPlaceholder());
+            }
         }
-    }
 
-    // 2. Fallback logic
-    if (placeholder == null) {
-        if (originalData instanceof Ageable) {
-            Ageable baby = (Ageable) originalData.clone();
-            baby.setAge(0);
-            placeholder = baby;
-        } else {
-            placeholder = Bukkit.createBlockData(Material.BEDROCK);
+        // 2. Fallback logic
+        if (placeholder == null) {
+            if (originalData instanceof Ageable) {
+                Ageable baby = (Ageable) originalData.clone();
+                baby.setAge(0);
+                placeholder = baby;
+            } else {
+                placeholder = Bukkit.createBlockData(Material.BEDROCK);
+            }
         }
-    }
 
-    block.setBlockData(placeholder, false);
+        block.setBlockData(placeholder, false);
 
-    int delay = rule.regenerationDelay();
-    if (delay <= 0) {
-        // Instant respawn
-        block.setBlockData(originalData, false);
-        regeneratingLocations.remove(loc);
-        if (onComplete != null) onComplete.run();
-        return;
-    }
-
-    new BukkitRunnable() {        @Override
-        public void run() {
-            // Restore original state
-            Block currentBlock = loc.getBlock();
-            currentBlock.setBlockData(originalData, false);
+        int delay = rule.regenerationDelay();
+        if (delay <= 0) {
+            // Instant respawn
+            block.setBlockData(originalData, false);
             regeneratingLocations.remove(loc);
             if (onComplete != null) onComplete.run();
+            return;
         }
-    }.runTaskLater(plugin, delay);
-}
+
+        new BukkitRunnable() {
+            @Override
+            public void run() {
+                // Restore original state
+                Block currentBlock = loc.getBlock();
+                currentBlock.setBlockData(originalData, false);
+                regeneratingLocations.remove(loc);
+                if (onComplete != null) onComplete.run();
+            }
+        }.runTaskLater(plugin, delay);
+    }
 }

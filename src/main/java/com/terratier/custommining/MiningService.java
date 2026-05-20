@@ -1,13 +1,18 @@
 package com.terratier.custommining;
 
+import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ThreadLocalRandom;
 import org.bukkit.Bukkit;
+import org.bukkit.Effect;
 import org.bukkit.FluidCollisionMode;
 import org.bukkit.GameMode;
 import org.bukkit.Location;
+import org.bukkit.Material;
 import org.bukkit.Particle;
 import org.bukkit.SoundCategory;
 import org.bukkit.SoundGroup;
@@ -15,6 +20,9 @@ import org.bukkit.attribute.Attribute;
 import org.bukkit.block.Block;
 import org.bukkit.block.data.BlockData;
 import org.bukkit.entity.Player;
+import org.bukkit.event.EventHandler;
+import org.bukkit.event.EventPriority;
+import org.bukkit.event.Listener;
 import org.bukkit.event.block.BlockBreakEvent;
 import org.bukkit.event.block.BlockDamageAbortEvent;
 import org.bukkit.event.block.BlockDamageEvent;
@@ -26,6 +34,7 @@ import org.bukkit.inventory.ItemStack;
 import org.bukkit.plugin.Plugin;
 import org.bukkit.scheduler.BukkitRunnable;
 import org.bukkit.util.RayTraceResult;
+import org.bukkit.util.Vector;
 
 final class MiningService {
     private static final double TICKS_PER_SECOND = 20.0;
@@ -36,7 +45,7 @@ final class MiningService {
     private final MiningBuffResolver buffResolver;
     private final MiningCalculator calculator;
     private final MiningSessionManager sessionManager = new MiningSessionManager();
-    private final Map<UUID, Long> placementCooldowns = new java.util.concurrent.ConcurrentHashMap<>();
+    private final Map<UUID, Long> placementCooldowns = new ConcurrentHashMap<>();
     private final VanillaMiningSuppressor suppressor;
     private final BlockRegenerationManager regenerationManager;
     private final FortuneManager fortuneManager = new FortuneManager();
@@ -54,8 +63,8 @@ final class MiningService {
         Bukkit.getPluginManager().registerEvents(new MiningEventHandler(this), plugin);
         
         // Internal listener for placement cooldowns
-        Bukkit.getPluginManager().registerEvents(new org.bukkit.event.Listener() {
-            @org.bukkit.event.EventHandler(priority = org.bukkit.event.EventPriority.MONITOR, ignoreCancelled = true)
+        Bukkit.getPluginManager().registerEvents(new Listener() {
+            @EventHandler(priority = EventPriority.MONITOR, ignoreCancelled = true)
             public void onBlockPlace(BlockPlaceEvent event) {
                 placementCooldowns.put(event.getPlayer().getUniqueId(), System.currentTimeMillis());
             }
@@ -293,21 +302,20 @@ final class MiningService {
         sessionManager.markCompleting(player.getUniqueId(), session.blockKey());
         try {
             if (rule != null) {
-                List<ItemStack> drops;
+                List<ItemStack> drops = new ArrayList<>();
                 if (!rule.customDrops().isEmpty()) {
-                    drops = new java.util.ArrayList<>();
                     for (MiningRule.DropRule dropRule : rule.customDrops()) {
-                        org.bukkit.Material mat = org.bukkit.Material.matchMaterial(dropRule.material());
+                        Material mat = Material.matchMaterial(dropRule.material());
                         if (mat != null) {
                             int amount = dropRule.min();
                             if (dropRule.max() > dropRule.min()) {
-                                amount = java.util.concurrent.ThreadLocalRandom.current().nextInt(dropRule.min(), dropRule.max() + 1);
+                                amount = ThreadLocalRandom.current().nextInt(dropRule.min(), dropRule.max() + 1);
                             }
                             if (amount > 0) drops.add(new ItemStack(mat, amount));
                         }
                     }
                 } else {
-                    drops = new java.util.ArrayList<>(block.getDrops(player.getInventory().getItemInMainHand(), player));
+                    drops.addAll(block.getDrops(player.getInventory().getItemInMainHand(), player));
                 }
 
                 MiningBuffTotals buffs = buffResolver.resolve(player, config);
@@ -330,7 +338,7 @@ final class MiningService {
                 }
 
                 if (rule.canRegenerate()) {
-                    if (useAutoPickup) block.setType(org.bukkit.Material.AIR, false);
+                    if (useAutoPickup) block.setType(Material.AIR, false);
                     regenerationManager.queueRegeneration(block, originalData, rule, () -> {
                         BlockKey key = BlockKey.from(block);
                         sessionManager.markTransitioning(key);
@@ -346,7 +354,7 @@ final class MiningService {
                         Bukkit.getScheduler().runTaskLater(plugin, () -> sessionManager.unmarkTransitioning(key), 2L);
                     });
                 } else {
-                    block.setType(org.bukkit.Material.AIR, true);
+                    block.setType(Material.AIR, true);
                 }
                 
                 clearSession(player);
@@ -415,24 +423,24 @@ final class MiningService {
     }
 
     private void popItem(Location loc, ItemStack item) {
-        double x = loc.getX() + (java.util.concurrent.ThreadLocalRandom.current().nextDouble() * 0.5) + 0.25;
-        double y = loc.getY() + (java.util.concurrent.ThreadLocalRandom.current().nextDouble() * 0.5) + 0.25;
-        double z = loc.getZ() + (java.util.concurrent.ThreadLocalRandom.current().nextDouble() * 0.5) + 0.25;
+        double x = loc.getX() + (ThreadLocalRandom.current().nextDouble() * 0.5) + 0.25;
+        double y = loc.getY() + (ThreadLocalRandom.current().nextDouble() * 0.5) + 0.25;
+        double z = loc.getZ() + (ThreadLocalRandom.current().nextDouble() * 0.5) + 0.25;
         
         Location spawnLoc = new Location(loc.getWorld(), x, y, z);
         org.bukkit.entity.Item dropped = loc.getWorld().dropItem(spawnLoc, item);
         
-        double vx = (java.util.concurrent.ThreadLocalRandom.current().nextDouble() * 0.1) - 0.05;
+        double vx = (ThreadLocalRandom.current().nextDouble() * 0.1) - 0.05;
         double vy = 0.2;
-        double vz = (java.util.concurrent.ThreadLocalRandom.current().nextDouble() * 0.1) - 0.05;
+        double vz = (ThreadLocalRandom.current().nextDouble() * 0.1) - 0.05;
         
-        dropped.setVelocity(new org.bukkit.util.Vector(vx, vy, vz));
+        dropped.setVelocity(new Vector(vx, vy, vz));
     }
 
     private void playBreakEffects(Block block, BlockData blockData) {
         // playEffect(STEP_SOUND) is the internal Minecraft way to play 
         // the standard block break sound AND particles for a specific block data.
-        block.getWorld().playEffect(block.getLocation(), org.bukkit.Effect.STEP_SOUND, blockData);
+        block.getWorld().playEffect(block.getLocation(), Effect.STEP_SOUND, blockData);
     }
 
     private void resetClientBlock(Player player, Block block, boolean repeatNextTick) {
