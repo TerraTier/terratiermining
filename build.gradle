@@ -1,0 +1,56 @@
+plugins {
+    id 'java'
+    id 'com.github.johnrengelman.shadow' version '8.1.1'
+}
+
+group = 'com.terratier'
+version = '0.3.0'
+description = 'Configurable TerraTier block strength, mining speed, and tool tier mechanics for Paper.'
+
+base {
+    archivesName = 'terratier-custom-mining'
+}
+
+java {
+    toolchain {
+        languageVersion = JavaLanguageVersion.of(25)
+    }
+}
+
+dependencies {
+    compileOnly 'io.papermc.paper:paper-api:26.1.2.build.64-stable'
+    implementation 'com.google.code.gson:gson:2.10.1'
+}
+
+tasks.withType(JavaCompile).configureEach {
+    options.encoding = 'UTF-8'
+    options.release = 25
+}
+
+tasks.register('deployPlugin') {
+    group = 'build'
+    description = 'Builds the plugin jar and copies it to a Paper server plugins folder.'
+    dependsOn tasks.named('jar')
+
+    doLast {
+        def pluginsDir = providers.gradleProperty('serverPluginsDir')
+            .orElse(providers.environmentVariable('TERRATIER_PLUGINS_DIR'))
+            .orNull
+
+        if (!pluginsDir) {
+            throw new GradleException('Set -PserverPluginsDir="C:/path/to/server/plugins" or TERRATIER_PLUGINS_DIR.')
+        }
+
+        copy {
+            from tasks.named('jar').get().archiveFile
+            into file(pluginsDir)
+        }
+
+        logger.lifecycle("Copied TerraTierMining to ${file(pluginsDir).absolutePath}")
+    }
+}
+
+// Make the shadow jar the default artifact for easier deployment
+tasks.named('shadowJar') {
+    archiveClassifier.set('')
+}

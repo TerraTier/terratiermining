@@ -1,0 +1,21 @@
+name: TerraTierMining
+version: 0.2.0
+main: com.terratier.custommining.TerraTierMiningPlugin
+api-version: "26.1"
+author: TerraTier
+description: Configurable TerraTier block strength, mining speed, and tool tier mechanics.
+commands:
+  terramining:
+    description: Reload or debug TerraTier custom mining.
+    usage: /<command> <speed|debug|reload>
+    aliases:
+      - ttmining
+      - ttm
+      - terratiermining
+      - lowmining
+      - lcmine
+      - lowclickermining
+permissions:
+  terratier.mining.admin:
+    description: Allows reloading and debugging the TerraTier mining plugin.
+    default: op

@@ -1,0 +1,24 @@
+# Highly customizable fortune system.
+# Map custom attribute IDs to lists of blocks they affect.
+# These work with the 'terratier:attributes' PDC on items.
+#
+# The 'fortune' attribute ID is reserved as a GLOBAL multiplier and works 
+# on all blocks controlled by this plugin automatically.
+
+fortune-mappings:
+  # Example: Ores
+  # ore_fortune:
+  #   - "minecraft:coal_ore"
+  #   - "minecraft:iron_ore"
+  #   - "minecraft:gold_ore"
+  #   - "minecraft:diamond_ore"
+  #   - "minecraft:emerald_ore"
+  
+  # Example: Wood
+  # wood_fortune: ["minecraft:oak_log", "minecraft:birch_log", "minecraft:spruce_log"]
+  
+  # Example: Crops
+  # crop_fortune:
+  #   - "minecraft:wheat"
+  #   - "minecraft:carrot"
+  #   - "minecraft:potatoes"

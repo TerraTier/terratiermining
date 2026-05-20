@@ -1,0 +1,41 @@
+name: Plugin Deploy
+
+on:
+  push:
+    branches: [ "main", "master" ]
+
+jobs:
+  build-and-upload:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Java 21
+        uses: actions/setup-java@v4
+        with:
+          java-version: '21'
+          distribution: 'temurin'
+          cache: 'gradle'
+
+      - name: Build with Gradle
+        run: |
+          chmod +x gradlew
+          ./gradlew shadowJar
+
+      - name: SFTP Deploy to Server.pro
+        uses: wlixcc/SFTP-Deploy-Action@v1.2.4
+        with:
+          username: ${{ secrets.SFTP_USER }}
+          password: ${{ secrets.SFTP_PASS }}
+          server: ${{ secrets.SFTP_HOST }}
+          port: ${{ secrets.SFTP_PORT }}
+          local_path: 'build/libs/terratier-custom-mining-0.3.0.jar'
+          remote_path: 'plugins/'
+          delete_remote: false
+
+      - name: Restart Server.pro
+        if: success()
+        run: |
+          curl -X POST "https://server.pro/api/v1/server/restart" \
+               -H "Authorization: Bearer ${{ secrets.SERVER_PRO_API_KEY }}" \
+               -d "id=${{ secrets.SERVER_PRO_SERVER_ID }}"
