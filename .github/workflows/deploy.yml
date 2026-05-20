@@ -29,13 +29,7 @@ jobs:
           password: ${{ secrets.SFTP_PASS }}
           server: ${{ secrets.SFTP_HOST }}
           port: ${{ secrets.SFTP_PORT }}
+          # Path inside the /pro/minecraft-2 cave
           local_path: 'build/libs/terratier-custom-mining-0.3.0.jar'
           remote_path: 'plugins/'
           delete_remote: false
-
-      - name: Restart Server.pro
-        if: success()
-        run: |
-          curl -X POST "https://server.pro/api/v1/server/restart" \
-               -H "Authorization: Bearer ${{ secrets.SERVER_PRO_API_KEY }}" \
-               -d "id=${{ secrets.SERVER_PRO_SERVER_ID }}"
