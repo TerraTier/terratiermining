@@ -15,14 +15,11 @@ import org.bukkit.command.CommandSender;
 import org.bukkit.command.TabCompleter;
 import org.bukkit.entity.Player;
 
-/**
- * Handles /ttm commands with a focus on aesthetics and clarity.
- */
 public final class MiningCommand implements CommandExecutor, TabCompleter {
-    private static final String SECONDARY = "#778899"; // Light Slate Gray
-    private static final String ACCENT = "#e0e0e0"; // Light Gray
-    private static final String HIGHLIGHT = "#5eead4"; // Turquoise
-    private static final String LABEL = "#4facfe"; // Sky Blue
+    // Standard Attribute Colors
+    private static final String COLOR_SPEED = "#4facfe";   // Sky Blue
+    private static final String COLOR_FORTUNE = "#f6d365"; // Gold
+    private static final String COLOR_LUCK = "#84fab0";    // Emerald Green
     
     private final TerraTierMiningPlugin plugin;
     private final Map<UUID, Long> lastStatsTime = new HashMap<>();
@@ -68,10 +65,7 @@ public final class MiningCommand implements CommandExecutor, TabCompleter {
     }
 
     private void showHelp(CommandSender sender) {
-        if (sender instanceof Player player) {
-            if (shouldSendLeadingNewline(player)) player.sendMessage("");
-        }
-        
+        sender.sendMessage("");
         sender.sendMessage(fade("TERRATIER MINING HELP", "#667eea", "#764ba2", true));
         sender.sendMessage("");
         
@@ -81,38 +75,18 @@ public final class MiningCommand implements CommandExecutor, TabCompleter {
         
         if (sender.hasPermission("terratier.mining.admin")) {
             sender.sendMessage("");
-            sender.sendMessage(hex(SECONDARY) + "§o" + fancy("Admin Commands:"));
+            sender.sendMessage(hex("#778899") + "§o" + fancy("Admin Commands:"));
             displayHelpLine(sender, "reload", "Reload configuration files", "#c2e9fb");
             displayHelpLine(sender, "debug", "Debug block/tool under cursor", "#cdeffb");
             displayHelpLine(sender, "drops", "View drop rates for block under cursor", "#c8f6fb");
         }
         
         sender.sendMessage("");
-        if (sender instanceof Player p) {
-            lastStatsTime.put(p.getUniqueId(), System.currentTimeMillis());
-        }
-    }
-
-    private void showDebug(Player player) {
-        if (shouldSendLeadingNewline(player)) player.sendMessage("");
-        player.sendMessage(fade("MINING DEBUGGER", "#ff9a9e", "#fecfef", true));
-        player.sendMessage("");
-        
-        plugin.miningService().debug(player);
-        
-        player.sendMessage("");
-        lastStatsTime.put(player.getUniqueId(), System.currentTimeMillis());
+        if (sender instanceof Player p) lastStatsTime.put(p.getUniqueId(), System.currentTimeMillis());
     }
 
     private void displayHelpLine(CommandSender sender, String cmd, String desc, String hexColor) {
         sender.sendMessage("  " + hex(hexColor) + "/ttm " + fancy(cmd) + " §8» §7" + desc);
-    }
-
-    private void sendInvalidMessage(CommandSender sender, String input) {
-        sender.sendMessage("");
-        sender.sendMessage("  §c§lERROR §8» " + hex(ACCENT) + fancy("Unknown command: ") + "§f" + input);
-        sender.sendMessage("  §8§o" + fancy("Type /ttm help for a list of commands"));
-        sender.sendMessage("");
     }
 
     private void showStats(Player player) {
@@ -120,23 +94,27 @@ public final class MiningCommand implements CommandExecutor, TabCompleter {
         ToolStats tool = service.resolveTool(player);
         MiningBuffTotals buffs = service.resolveBuffs(player);
 
-        if (shouldSendLeadingNewline(player)) player.sendMessage("");
-        player.sendMessage(fade("MINING STATISTICS", "#4facfe", "#00f2fe", true));
+        player.sendMessage("");
+        player.sendMessage(fade("MINING STATISTICS", "#a1c4fd", "#c2e9fb", true));
         player.sendMessage("");
         
-        displayStatLine(player, "Speed", tool.speed(), "⚒");
+        displayStatLine(player, "Speed", tool.speed(), "⚒", COLOR_SPEED);
         
         double fortune = buffs.get("fortune", 0.0);
-        if (fortune != 0) displayStatLine(player, "Fortune", fortune, "☘");
+        if (fortune != 0) displayStatLine(player, "Fortune", fortune, "☘", COLOR_FORTUNE);
 
-        double luck = buffs.get("luck", 0.0);
-        if (luck != 0) displayStatLine(player, "Luck", luck, "✨");
+        double luck = buffs.get("luck", 0.0) + buffs.get("mining_luck", 0.0);
+        if (luck != 0) displayStatLine(player, "Luck", luck, "✦", COLOR_LUCK);
         
         player.sendMessage("");
-        player.sendMessage("§8§o" + fancy("Type /ttm stats breakdown for details"));
+        player.sendMessage("  §8§o" + fancy("Type /ttm stats breakdown for details"));
         player.sendMessage("");
         
         lastStatsTime.put(player.getUniqueId(), System.currentTimeMillis());
+    }
+
+    private void displayStatLine(Player player, String label, double val, String icon, String color) {
+        player.sendMessage("  " + hex(color) + icon + " §7" + fancy(label) + " §8» §f" + String.format("%.1f", val));
     }
 
     private void showBreakdown(Player player) {
@@ -144,88 +122,68 @@ public final class MiningCommand implements CommandExecutor, TabCompleter {
         ToolStats tool = service.resolveTool(player);
         MiningBuffTotals buffs = service.resolveBuffs(player);
 
-        if (shouldSendLeadingNewline(player)) player.sendMessage("");
-        player.sendMessage(fade("MINING STATS BREAKDOWN", "#4facfe", "#00f2fe", true));
+        player.sendMessage("");
+        player.sendMessage(fade("STATS BREAKDOWN", "#a1c4fd", "#c2e9fb", true));
         
         displaySpeedBreakdown(player, tool, buffs);
 
         double fortune = buffs.get("fortune", 0.0);
-        if (fortune != 0) displayAttributeBreakdown(player, buffs, "fortune", "Fortune", "☘", 0.0, "base");
+        if (fortune != 0) displayAttributeBreakdown(player, buffs, "fortune", "Fortune", "☘", COLOR_FORTUNE);
 
-        double luck = buffs.get("luck", 0.0);
-        if (luck != 0) displayAttributeBreakdown(player, buffs, "luck", "Luck", "✨", 0.0, "base");
+        double luck = buffs.get("luck", 0.0) + buffs.get("mining_luck", 0.0);
+        if (luck != 0) displayAttributeBreakdown(player, buffs, "luck", "Luck", "✦", COLOR_LUCK);
 
         player.sendMessage("");
-        
         lastStatsTime.put(player.getUniqueId(), System.currentTimeMillis());
-    }
-
-    private boolean shouldSendLeadingNewline(Player player) {
-        long last = lastStatsTime.getOrDefault(player.getUniqueId(), 0L);
-        return (System.currentTimeMillis() - last) > 100;
-    }
-
-    private void displayStatLine(Player player, String label, double value, String symbol) {
-        player.sendMessage("  " + hex(LABEL) + fancy(label) + " §8» §7" + String.format("%.1f", value) + " " + symbol);
     }
 
     private void displaySpeedBreakdown(Player player, ToolStats tool, MiningBuffTotals buffs) {
         double finalSpeed = tool.speed();
-        String label = "Mining Speed";
-        String symbol = "⚒";
-
         player.sendMessage("");
-        player.sendMessage("  " + hex(HIGHLIGHT) + fancy(label) + " §8» §7" + String.format("%.1f", finalSpeed) + " " + symbol);
+        player.sendMessage("  " + fade("Mining Speed", COLOR_SPEED, "#ffffff", false) + " §8» " + hex(COLOR_SPEED) + "⚒ §f" + String.format("%.1f", finalSpeed));
         
-        // Find the "pure" tool speed by reversing buffs
         double speedAdd = buffs.getTotalAdd("mining_speed") + buffs.getTotalAdd("speed");
         double speedMult = buffs.getTotalMultiplier("mining_speed") * buffs.getTotalMultiplier("speed");
         double pureToolSpeed = (finalSpeed / Math.max(0.001, speedMult)) - speedAdd;
 
-        player.sendMessage("    §8+§7" + String.format("%.1f", pureToolSpeed) + " §8(" + hex(SECONDARY) + fancy(tool.type().displayName()) + "§8)");
+        player.sendMessage("    §8▪ §7+" + String.format("%.1f", pureToolSpeed) + " §8(" + fancy(tool.type().displayName()) + "§8)");
 
         buffs.sourceBreakdown().forEach((type, totals) -> {
             double add = totals.get("mining_speed", 0.0) + totals.get("speed", 0.0);
             double mult = totals.get("mining_speed_multiplier", 1.0) * totals.get("speed_multiplier", 1.0);
-            
-            String sourceName = switch (type) {
-                case HELD -> "tools";
-                case OFFHAND -> "off-hand";
-                case ARMOR -> "armors";
-                case INVENTORY -> "inventory";
-            };
+            String name = type.name().toLowerCase();
+            if (add != 0) player.sendMessage("    §8▪ §7+" + String.format("%.1f", add) + " §8(" + fancy(name) + "§8)");
+            if (mult != 1.0) player.sendMessage("    §8▪ §7x" + String.format("%.2f", mult) + " §8(" + fancy(name) + "§8)");
+        });
+    }
 
-            if (add != 0) {
-                player.sendMessage("    §8+§7" + String.format("%.1f", add) + " §8(" + hex(SECONDARY) + fancy(sourceName) + "§8)");
-            }
-            if (mult != 1.0) {
-                player.sendMessage("    §8x§7" + String.format("%.2f", mult) + " §8(" + hex(SECONDARY) + fancy(sourceName) + "§8)");
+    private void displayAttributeBreakdown(Player player, MiningBuffTotals buffs, String attr, String label, String symbol, String color) {
+        double total = buffs.get(attr, 0.0);
+        player.sendMessage("");
+        player.sendMessage("  " + fade(label, color, "#ffffff", false) + " §8» " + hex(color) + symbol + " §f" + String.format("%.1f", total));
+        
+        buffs.sourceBreakdown().forEach((type, totals) -> {
+            double val = totals.get(attr, 0.0);
+            if (val != 0) {
+                player.sendMessage("    §8▪ §7+" + String.format("%.1f", val) + " §8(" + fancy(type.name().toLowerCase()) + "§8)");
             }
         });
     }
 
-    private void displayAttributeBreakdown(Player player, MiningBuffTotals buffs, String attr, String label, String symbol, double base, String baseLabel) {
-        double total = buffs.get(attr, 0.0) + base;
-
+    private void showDebug(Player player) {
         player.sendMessage("");
-        player.sendMessage("  " + hex(HIGHLIGHT) + fancy(label) + " §8» §7" + String.format("%.1f", total) + " " + symbol);
-        
-        if (base > 0) {
-            player.sendMessage("    §8+§7" + String.format("%.1f", base) + " §8(" + hex(SECONDARY) + fancy(baseLabel) + "§8)");
-        }
+        player.sendMessage(fade("MINING DEBUGGER", "#ff9a9e", "#fecfef", true));
+        player.sendMessage("");
+        plugin.miningService().debug(player);
+        player.sendMessage("");
+        lastStatsTime.put(player.getUniqueId(), System.currentTimeMillis());
+    }
 
-        buffs.sourceBreakdown().forEach((type, totals) -> {
-            double val = totals.get(attr, 0.0);
-            if (val != 0) {
-                String sourceName = switch (type) {
-                    case HELD -> "tools";
-                    case OFFHAND -> "off-hand";
-                    case ARMOR -> "armors";
-                    case INVENTORY -> "inventory";
-                };
-                player.sendMessage("    §8+§7" + String.format("%.1f", val) + " §8(" + hex(SECONDARY) + fancy(sourceName) + "§8)");
-            }
-        });
+    private void sendInvalidMessage(CommandSender sender, String input) {
+        sender.sendMessage("");
+        sender.sendMessage("  §c§lERROR §8» §7" + fancy("Unknown command: ") + "§f" + input);
+        sender.sendMessage("  §8§o" + fancy("Type /ttm help for a list of commands"));
+        sender.sendMessage("");
     }
 
     private String fade(String text, String from, String to, boolean bold) {
@@ -244,49 +202,27 @@ public final class MiningCommand implements CommandExecutor, TabCompleter {
             int g = g1 + (g2 - g1) * i / Math.max(1, length - 1);
             int b = b1 + (b2 - b1) * i / Math.max(1, length - 1);
             String hex = String.format("#%02x%02x%02x", r, g, b);
-            
-            String character = String.valueOf(text.charAt(i));
             sb.append(hex(hex));
             if (bold) sb.append("§l");
-            sb.append(fancy(character));
+            sb.append(fancy(String.valueOf(text.charAt(i))));
         }
         return sb.toString();
     }
 
     private String hex(String code) {
-        return "§x" + code.substring(1).chars()
-            .mapToObj(c -> "§" + (char)c)
-            .reduce("", (a, b) -> a + b);
+        return "§x" + code.substring(1).chars().mapToObj(c -> "§" + (char)c).reduce("", (a, b) -> a + b);
     }
 
     private String fancy(String input) {
+        if (input == null) return "";
         return input.toLowerCase()
-            .replace("a", "ᴀ")
-            .replace("b", "ʙ")
-            .replace("c", "ᴄ")
-            .replace("d", "ᴅ")
-            .replace("e", "ᴇ")
-            .replace("f", "ꜰ")
-            .replace("g", "ɢ")
-            .replace("h", "ʜ")
-            .replace("i", "ɪ")
-            .replace("j", "ᴊ")
-            .replace("k", "ᴋ")
-            .replace("l", "ʟ")
-            .replace("m", "ᴍ")
-            .replace("n", "ɴ")
-            .replace("o", "ᴏ")
-            .replace("p", "ᴘ")
-            .replace("q", "ǫ")
-            .replace("r", "ʀ")
-            .replace("s", "ꜱ")
-            .replace("t", "ᴛ")
-            .replace("u", "ᴜ")
-            .replace("v", "ᴠ")
-            .replace("w", "ᴡ")
-            .replace("x", "x")
-            .replace("y", "ʏ")
-            .replace("z", "ᴢ");
+            .replace("a", "ᴀ").replace("b", "ʙ").replace("c", "ᴄ").replace("d", "ᴅ")
+            .replace("e", "ᴇ").replace("f", "ꜰ").replace("g", "ɢ").replace("h", "ʜ")
+            .replace("i", "ɪ").replace("j", "ᴊ").replace("k", "ᴋ").replace("l", "ʟ")
+            .replace("m", "ᴍ").replace("n", "ɴ").replace("o", "ᴏ").replace("p", "ᴘ")
+            .replace("q", "ǫ").replace("r", "ʀ").replace("s", "ꜱ").replace("t", "ᴛ")
+            .replace("u", "ᴜ").replace("v", "ᴠ").replace("w", "ᴡ").replace("x", "x")
+            .replace("y", "ʏ").replace("z", "ᴢ");
     }
 
     @Override
@@ -297,13 +233,9 @@ public final class MiningCommand implements CommandExecutor, TabCompleter {
                 options.add("debug");
                 options.add("drops");
             }
-            return options.stream()
-                .filter(s -> s.startsWith(args[0].toLowerCase()))
-                .toList();
+            return options.stream().filter(s -> s.startsWith(args[0].toLowerCase())).toList();
         }
-        if (args.length == 2 && args[0].equalsIgnoreCase("stats")) {
-            return List.of("breakdown");
-        }
+        if (args.length == 2 && args[0].equalsIgnoreCase("stats")) return List.of("breakdown");
         return List.of();
     }
 }

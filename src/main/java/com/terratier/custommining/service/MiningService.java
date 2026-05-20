@@ -122,36 +122,20 @@ public final class MiningService {
         MiningRule rule = config.findBlockRule(candidates);
         ToolStats tool = resolveTool(player);
 
-        player.sendMessage("  §b§lBLOCK §8» §f" + target.getType().name().toLowerCase());
-        player.sendMessage("    §8▪ §7Data: §f" + target.getBlockData().getAsString(false));
-        player.sendMessage("    §8▪ §7Candidates: §3" + String.join("§8, §3", candidates));
-        player.sendMessage("    §8▪ §7Matched Rule: " + (rule != null ? "§a" + rule.id() : "§cNone"));
+        player.sendMessage("  §b§l" + fancy("BLOCK") + " §8» §f" + target.getType().name().toLowerCase());
+        player.sendMessage("    §8▪ §7" + fancy("Data") + ": §f" + target.getBlockData().getAsString(false));
+        player.sendMessage("    §8▪ §7" + fancy("Matched") + ": " + (rule != null ? "§a" + rule.id() : "§cNone"));
         
         if (rule != null) {
-            player.sendMessage("    §8▪ §7Strength: §f" + rule.strength());
-            player.sendMessage("    §8▪ §7Requirement: §f" + rule.requirementText());
-            player.sendMessage("    §8▪ §7Can Harvest: " + (rule.canHarvest(tool) ? "§aYes" : "§cNo"));
+            player.sendMessage("    §8▪ §7" + fancy("Strength") + ": §f" + rule.strength());
+            player.sendMessage("    §8▪ §7" + fancy("Tool") + ": §f" + rule.requirementText());
         }
 
         player.sendMessage("");
-
-        player.sendMessage("  §d§lTOOL §8» §f" + tool.id());
-        player.sendMessage("    §8▪ §7Type: §f" + tool.type().displayName());
-        player.sendMessage("    §8▪ §7Tier: §f" + tool.tier());
-        player.sendMessage("    §8▪ §7Speed: §f" + String.format("%.2f", tool.speed()));
-        player.sendMessage("    §8▪ §7Source: §8§o" + tool.source());
-    }
-
-    private String fancy(String input) {
-        if (input == null) return "";
-        return input.toLowerCase()
-            .replace("a", "ᴀ").replace("b", "ʙ").replace("c", "ᴄ").replace("d", "ᴅ")
-            .replace("e", "ᴇ").replace("f", "ꜰ").replace("g", "ɢ").replace("h", "ʜ")
-            .replace("i", "ɪ").replace("j", "ᴊ").replace("k", "ᴋ").replace("l", "ʟ")
-            .replace("m", "ᴍ").replace("n", "ɴ").replace("o", "ᴏ").replace("p", "ᴘ")
-            .replace("q", "ǫ").replace("r", "ʀ").replace("s", "ꜱ").replace("t", "ᴛ")
-            .replace("u", "ᴜ").replace("v", "ᴠ").replace("w", "ᴡ").replace("x", "x")
-            .replace("y", "ʏ").replace("z", "ᴢ");
+        player.sendMessage("  §d§l" + fancy("TOOL") + " §8» §f" + tool.id());
+        player.sendMessage("    §8▪ §7" + fancy("Type") + ": §f" + tool.type().displayName());
+        player.sendMessage("    §8▪ §7" + fancy("Tier") + ": §f" + tool.tier());
+        player.sendMessage("    §8▪ §7" + fancy("Speed") + ": §f" + String.format("%.1f", tool.speed()));
     }
 
     public void handleAnimation(PlayerAnimationEvent event) {
@@ -404,11 +388,7 @@ public final class MiningService {
         player.sendMessage("");
 
         String[][] palettes = {
-            {"#ff9a9e", "#fecfef"}, 
-            {"#a1c4fd", "#c2e9fb"}, 
-            {"#84fab0", "#8fd3f4"}, 
-            {"#f6d365", "#fda085"}, 
-            {"#667eea", "#764ba2"}
+            {"#ff9a9e", "#fecfef"}, {"#a1c4fd", "#c2e9fb"}, {"#84fab0", "#8fd3f4"}, {"#f6d365", "#fda085"}, {"#667eea", "#764ba2"}
         };
 
         int tIdx = 0;
@@ -476,16 +456,13 @@ public final class MiningService {
     }
 
     private String hex(String code) {
-        return "§x" + code.substring(1).chars()
-            .mapToObj(c -> "§" + (char)c)
-            .reduce("", (a, b) -> a + b);
+        return "§x" + code.substring(1).chars().mapToObj(c -> "§" + (char)c).reduce("", (a, b) -> a + b);
     }
 
     private String fade(String text, String from, String to, boolean bold) {
         int r1 = Integer.valueOf(from.substring(1, 3), 16);
         int g1 = Integer.valueOf(from.substring(3, 5), 16);
         int b1 = Integer.valueOf(from.substring(5, 7), 16);
-        
         int r2 = Integer.valueOf(to.substring(1, 3), 16);
         int g2 = Integer.valueOf(to.substring(3, 5), 16);
         int b2 = Integer.valueOf(to.substring(5, 7), 16);
@@ -497,7 +474,6 @@ public final class MiningService {
             int g = g1 + (g2 - g1) * i / Math.max(1, length - 1);
             int b = b1 + (b2 - b1) * i / Math.max(1, length - 1);
             String hex = String.format("#%02x%02x%02x", r, g, b);
-            
             sb.append(hex(hex));
             if (bold) sb.append("§l");
             sb.append(fancy(String.valueOf(text.charAt(i))));
@@ -697,6 +673,18 @@ public final class MiningService {
                 }
             });
         }
+    }
+
+    private String fancy(String input) {
+        if (input == null) return "";
+        return input.toLowerCase()
+            .replace("a", "ᴀ").replace("b", "ʙ").replace("c", "ᴄ").replace("d", "ᴅ")
+            .replace("e", "ᴇ").replace("f", "ꜰ").replace("g", "ɢ").replace("h", "ʜ")
+            .replace("i", "ɪ").replace("j", "ᴊ").replace("k", "ᴋ").replace("l", "ʟ")
+            .replace("m", "ᴍ").replace("n", "ɴ").replace("o", "ᴏ").replace("p", "ᴘ")
+            .replace("q", "ǫ").replace("r", "ʀ").replace("s", "ꜱ").replace("t", "ᴛ")
+            .replace("u", "ᴜ").replace("v", "ᴠ").replace("w", "ᴡ").replace("x", "x")
+            .replace("y", "ʏ").replace("z", "ᴢ");
     }
 
     private int damageSourceId(Player player) {
