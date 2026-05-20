@@ -21,7 +21,7 @@ settings:
 
   # Short delay between consecutive block breaks (ms).
   # Prevents "machine gun" mining on instant-regen blocks.
-  break-cooldown-ms: 200
+  break-cooldown-ms: 100
 
   max-mining-distance: 7.0
 
