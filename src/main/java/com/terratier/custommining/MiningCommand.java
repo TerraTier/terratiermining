@@ -27,7 +27,10 @@ final class MiningCommand implements CommandExecutor, TabCompleter {
 
     @Override
     public boolean onCommand(CommandSender sender, Command command, String label, String[] args) {
-        if (args.length == 0) return false;
+        if (args.length == 0 || args[0].equalsIgnoreCase("help")) {
+            showHelp(sender);
+            return true;
+        }
 
         if (args[0].equalsIgnoreCase("reload") && sender.hasPermission("terratier.mining.admin")) {
             plugin.reloadMiningConfig();
@@ -44,7 +47,44 @@ final class MiningCommand implements CommandExecutor, TabCompleter {
             return true;
         }
 
-        return false;
+        sendInvalidMessage(sender, args[0]);
+        return true;
+    }
+
+    private void showHelp(CommandSender sender) {
+        if (sender instanceof Player player) {
+            if (shouldSendLeadingNewline(player)) player.sendMessage("");
+        }
+        
+        sender.sendMessage(fade("TERRATIER MINING HELP", "#667eea", "#764ba2", true));
+        sender.sendMessage("");
+        
+        // Command list gradient: Soft Blue to Light Sky
+        displayHelpLine(sender, "help", "Show this menu", "#a1c4fd");
+        displayHelpLine(sender, "stats", "View your mining stats", "#abc9fd");
+        displayHelpLine(sender, "stats breakdown", "View detailed stat sources", "#b5cefd");
+        
+        if (sender.hasPermission("terratier.mining.admin")) {
+            sender.sendMessage("");
+            sender.sendMessage(hex(SECONDARY) + "§o" + fancy("Admin Commands:"));
+            displayHelpLine(sender, "reload", "Reload configuration files", "#c2e9fb");
+        }
+        
+        sender.sendMessage("");
+        if (sender instanceof Player p) {
+            lastStatsTime.put(p.getUniqueId(), System.currentTimeMillis());
+        }
+    }
+
+    private void displayHelpLine(CommandSender sender, String cmd, String desc, String hexColor) {
+        sender.sendMessage("  " + hex(hexColor) + "/ttm " + fancy(cmd) + " §8» §7" + desc);
+    }
+
+    private void sendInvalidMessage(CommandSender sender, String input) {
+        sender.sendMessage("");
+        sender.sendMessage("  §c§lERROR §8» " + hex(ACCENT) + fancy("Unknown command: ") + "§f" + input);
+        sender.sendMessage("  §8§o" + fancy("Type /ttm help for a list of commands"));
+        sender.sendMessage("");
     }
 
     private void showStats(Player player) {
@@ -184,7 +224,7 @@ final class MiningCommand implements CommandExecutor, TabCompleter {
     @Override
     public List<String> onTabComplete(CommandSender sender, Command command, String alias, String[] args) {
         if (args.length == 1) {
-            List<String> options = new ArrayList<>(List.of("reload", "stats"));
+            List<String> options = new ArrayList<>(List.of("reload", "stats", "help"));
             if (sender.hasPermission("terratier.mining.admin")) {
                 options.add("speed");
                 options.add("debug");
