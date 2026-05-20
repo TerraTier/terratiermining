@@ -47,14 +47,18 @@ blocks:
     can-regenerate: true
     regeneration-delay: 0
     drops:
-      - strategy: pooled # 50/50 test
+      - strategy: pooled      # Base odds testing
         pool:
-          - "minecraft:white_wool:1:3"
-          - "minecraft:string:1-3:1"
-      - strategy: independent # Bonus rewards
+          - "minecraft:white_wool:1:1000"
+          - "minecraft:light_gray_wool:1:100"
+          - "minecraft:gray_wool:1:10"
+          - "minecraft:black_wool:1:1"
+      - strategy: independent # Luck boosts this
         pool:
-          - "minecraft:shears:1:1/10" # 10% chance
-          - "minecraft:mutton:1:50%" # 50% chance
+          - "minecraft:shears:1:1/100"
+      - strategy: static      # Unaffected by Luck
+        pool:
+          - "minecraft:string:1-3:100%"
 
   minecraft:coal_ore:
     strength: 25.0

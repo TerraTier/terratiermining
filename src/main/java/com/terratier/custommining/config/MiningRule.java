@@ -21,8 +21,9 @@ public record MiningRule(
     }
 
     public enum DropStrategy {
-        POOLED,      // OSRS Main: Pick one from weighted pool
-        INDEPENDENT  // OSRS Tertiary: Each item rolls own chance
+        POOLED,      // OSRS Main: Pick one, rare items boosted by Luck
+        INDEPENDENT, // OSRS Tertiary: Rolls each, flat boosted by Luck
+        STATIC       // Always: Rolls each, NOT affected by Luck
     }
 
     public record LootTable(

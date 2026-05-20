@@ -4,7 +4,7 @@ plugins {
 }
 
 group = 'com.terratier'
-version = '0.3.2'
+version = '0.3.0'
 description = 'Configurable TerraTier block strength, mining speed, and tool tier mechanics for Paper.'
 
 base {

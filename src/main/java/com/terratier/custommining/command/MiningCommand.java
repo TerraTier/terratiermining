@@ -58,6 +58,11 @@ public final class MiningCommand implements CommandExecutor, TabCompleter {
             return true;
         }
 
+        if (args[0].equalsIgnoreCase("drops") && sender instanceof Player player && sender.hasPermission("terratier.mining.admin")) {
+            plugin.miningService().showDrops(player);
+            return true;
+        }
+
         sendInvalidMessage(sender, args[0]);
         return true;
     }
@@ -79,6 +84,7 @@ public final class MiningCommand implements CommandExecutor, TabCompleter {
             sender.sendMessage(hex(SECONDARY) + "§o" + fancy("Admin Commands:"));
             displayHelpLine(sender, "reload", "Reload configuration files", "#c2e9fb");
             displayHelpLine(sender, "debug", "Debug block/tool under cursor", "#cdeffb");
+            displayHelpLine(sender, "drops", "View drop rates for block under cursor", "#c8f6fb");
         }
         
         sender.sendMessage("");
@@ -121,7 +127,10 @@ public final class MiningCommand implements CommandExecutor, TabCompleter {
         displayStatLine(player, "Speed", tool.speed(), "⚒");
         
         double fortune = buffs.get("fortune", 0.0);
-        displayStatLine(player, "Fortune", fortune, "☘");
+        if (fortune != 0) displayStatLine(player, "Fortune", fortune, "☘");
+
+        double luck = buffs.get("luck", 0.0);
+        if (luck != 0) displayStatLine(player, "Luck", luck, "✨");
         
         player.sendMessage("");
         player.sendMessage("§8§o" + fancy("Type /ttm stats breakdown for details"));
@@ -139,7 +148,12 @@ public final class MiningCommand implements CommandExecutor, TabCompleter {
         player.sendMessage(fade("MINING STATS BREAKDOWN", "#4facfe", "#00f2fe", true));
         
         displaySpeedBreakdown(player, tool, buffs);
-        displayAttributeBreakdown(player, buffs, "fortune", "Fortune", "☘", 0.0, "base");
+
+        double fortune = buffs.get("fortune", 0.0);
+        if (fortune != 0) displayAttributeBreakdown(player, buffs, "fortune", "Fortune", "☘", 0.0, "base");
+
+        double luck = buffs.get("luck", 0.0);
+        if (luck != 0) displayAttributeBreakdown(player, buffs, "luck", "Luck", "✨", 0.0, "base");
 
         player.sendMessage("");
         
@@ -281,6 +295,7 @@ public final class MiningCommand implements CommandExecutor, TabCompleter {
             List<String> options = new ArrayList<>(List.of("reload", "stats", "help"));
             if (sender.hasPermission("terratier.mining.admin")) {
                 options.add("debug");
+                options.add("drops");
             }
             return options.stream()
                 .filter(s -> s.startsWith(args[0].toLowerCase()))

@@ -146,8 +146,9 @@ public final class MiningBuffResolver {
         MiningBuffTotals updated = totals;
         if (accumulator.hasValues()) {
             for (Map.Entry<String, Double> entry : accumulator.attributes.entrySet()) {
-                boolean multiply = entry.getKey().endsWith("_multiplier") || entry.getKey().endsWith("-multiplier");
-                updated = updated.add(entry.getKey(), entry.getValue(), multiply);
+                String key = Ids.normalizeAttribute(entry.getKey());
+                boolean multiply = key.endsWith("_multiplier") || key.endsWith("-multiplier");
+                updated = updated.add(key, entry.getValue(), multiply);
             }
         }
 
@@ -155,8 +156,9 @@ public final class MiningBuffResolver {
             MiningBuffRule rule = config.findBuffRule(candidate);
             if (rule != null && rule.appliesTo(sourceType, slot)) {
                 for (Map.Entry<String, Double> entry : rule.attributes().entrySet()) {
-                    boolean multiply = entry.getKey().endsWith("_multiplier") || entry.getKey().endsWith("-multiplier");
-                    updated = updated.add(entry.getKey(), entry.getValue(), multiply);
+                    String key = Ids.normalizeAttribute(entry.getKey());
+                    boolean multiply = key.endsWith("_multiplier") || key.endsWith("-multiplier");
+                    updated = updated.add(key, entry.getValue(), multiply);
                 }
                 break;
             }

@@ -33,6 +33,7 @@ import org.bukkit.event.block.BlockDamageEvent;
 import org.bukkit.event.block.BlockPlaceEvent;
 import org.bukkit.event.player.PlayerAnimationEvent;
 import org.bukkit.event.player.PlayerChangedWorldEvent;
+import org.bukkit.event.player.PlayerInteractEvent;
 import org.bukkit.event.player.PlayerQuitEvent;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.plugin.Plugin;
@@ -51,6 +52,7 @@ public final class MiningService {
     private final MiningCalculator calculator;
     private final MiningSessionManager sessionManager = new MiningSessionManager();
     private final Map<UUID, Long> placementCooldowns = new ConcurrentHashMap<>();
+    private final Map<UUID, Long> interactionCooldowns = new ConcurrentHashMap<>();
     private final Map<BlockKey, Long> breakCooldowns = new ConcurrentHashMap<>();
     private final VanillaMiningSuppressor suppressor;
     private final BlockRegenerationManager regenerationManager;
@@ -92,6 +94,7 @@ public final class MiningService {
         if (tickTask != null) tickTask.cancel();
         clearAllSessions();
         placementCooldowns.clear();
+        interactionCooldowns.clear();
         breakCooldowns.clear();
         for (Player player : Bukkit.getOnlinePlayers()) {
             suppressor.remove(player);
@@ -140,6 +143,7 @@ public final class MiningService {
     }
 
     private String fancy(String input) {
+        if (input == null) return "";
         return input.toLowerCase()
             .replace("a", "ᴀ").replace("b", "ʙ").replace("c", "ᴄ").replace("d", "ᴅ")
             .replace("e", "ᴇ").replace("f", "ꜰ").replace("g", "ɢ").replace("h", "ʜ")
@@ -156,9 +160,9 @@ public final class MiningService {
         Player player = event.getPlayer();
         if (sessionManager.hasSession(player.getUniqueId())) return;
 
-        if (System.currentTimeMillis() - placementCooldowns.getOrDefault(player.getUniqueId(), 0L) < 250) {
-            return;
-        }
+        long now = System.currentTimeMillis();
+        if (now - placementCooldowns.getOrDefault(player.getUniqueId(), 0L) < 250) return;
+        if (now - interactionCooldowns.getOrDefault(player.getUniqueId(), 0L) < 250) return;
 
         Block target = rayTraceTarget(player);
         if (target == null) return;
@@ -178,6 +182,12 @@ public final class MiningService {
         Player player = event.getPlayer();
         
         if (!isWithinReach(player, block)) return;
+
+        long now = System.currentTimeMillis();
+        if (now - interactionCooldowns.getOrDefault(player.getUniqueId(), 0L) < 250) {
+            event.setCancelled(true);
+            return;
+        }
 
         if (breakCooldowns.containsKey(BlockKey.from(block))) {
             event.setCancelled(true);
@@ -266,9 +276,16 @@ public final class MiningService {
         placementCooldowns.put(event.getPlayer().getUniqueId(), System.currentTimeMillis());
     }
 
+    public void handleInteract(PlayerInteractEvent event) {
+        if (event.getAction().name().contains("RIGHT")) {
+            interactionCooldowns.put(event.getPlayer().getUniqueId(), System.currentTimeMillis());
+        }
+    }
+
     public void handleQuit(PlayerQuitEvent event) {
         clearSession(event.getPlayer());
         placementCooldowns.remove(event.getPlayer().getUniqueId());
+        interactionCooldowns.remove(event.getPlayer().getUniqueId());
     }
 
     public void handleChangedWorld(PlayerChangedWorldEvent event) {
@@ -362,10 +379,146 @@ public final class MiningService {
         }
     }
 
+    public void showDrops(Player player) {
+        Block target = rayTraceTarget(player);
+        if (target == null) {
+            player.sendMessage("  §c§l× §7" + fancy("No block in sight."));
+            return;
+        }
+
+        List<String> candidates = blockResolver.candidates(target, config);
+        MiningRule rule = config.findBlockRule(candidates);
+
+        if (rule == null) {
+            player.sendMessage("  §c§l× §7" + fancy("No custom drops configured."));
+            return;
+        }
+
+        MiningBuffTotals buffs = resolveBuffs(player);
+        double luck = buffs.get("luck", 0.0) + buffs.get("mining_luck", 0.0);
+        double luckMultiplier = 1.0 + (luck / 100.0);
+
+        player.sendMessage("");
+        String blockName = target.getType().name().replace("_", " ");
+        player.sendMessage("  " + fade(blockName, "#4facfe", "#00f2fe", true) + " §8| §7Luck: §b" + String.format("%.1f", luck) + " ✦");
+        player.sendMessage("");
+
+        String[][] palettes = {
+            {"#ff9a9e", "#fecfef"}, 
+            {"#a1c4fd", "#c2e9fb"}, 
+            {"#84fab0", "#8fd3f4"}, 
+            {"#f6d365", "#fda085"}, 
+            {"#667eea", "#764ba2"}
+        };
+
+        int tIdx = 0;
+        for (MiningRule.LootTable table : rule.tables()) {
+            String[] colors = palettes[tIdx % palettes.length];
+            String displayType = switch(table.strategy()) {
+                case POOLED -> "WEIGHTED";
+                case STATIC -> "FIXED";
+                case INDEPENDENT -> "CHANCE";
+            };
+            String techType = table.strategy().name().toLowerCase();
+            
+            player.sendMessage("  " + hex(colors[0]) + "§l" + fancy(displayType) + " §8" + fancy(techType));
+
+            if (table.strategy() == MiningRule.DropStrategy.POOLED) {
+                double rawTotal = 0;
+                for (MiningRule.DropRule r : table.pool()) rawTotal += r.value();
+
+                double luckPercent = luck / 100.0;
+                double totalMod = 0;
+                double[] modWeights = new double[table.pool().size()];
+
+                for (int i = 0; i < table.pool().size(); i++) {
+                    MiningRule.DropRule r = table.pool().get(i);
+                    double weight = r.value();
+                    double rarity = Math.log10(Math.max(1.0, rawTotal / Math.max(0.001, weight)));
+                    double boost = 1.0 + (luckPercent * rarity);
+                    if (r.material().equalsIgnoreCase("minecraft:air") || r.material().equalsIgnoreCase("air")) boost = 1.0;
+                    modWeights[i] = weight * boost;
+                    totalMod += modWeights[i];
+                }
+
+                for (int i = 0; i < table.pool().size(); i++) {
+                    MiningRule.DropRule r = table.pool().get(i);
+                    double base = rawTotal > 0 ? (r.value() / rawTotal) * 100 : 0;
+                    double curr = totalMod > 0 ? (modWeights[i] / totalMod) * 100 : 0;
+                    renderLine(player, r, base, curr, luck != 0, colors[1]);
+                }
+            } else {
+                for (MiningRule.DropRule r : table.pool()) {
+                    double base = r.value() * 100;
+                    double curr = table.strategy() == MiningRule.DropStrategy.STATIC ? base : Math.min(100, base * luckMultiplier);
+                    renderLine(player, r, base, curr, luck != 0 && table.strategy() != MiningRule.DropStrategy.STATIC, colors[1]);
+                }
+            }
+            tIdx++;
+            if (tIdx < rule.tables().size()) player.sendMessage("");
+        }
+        player.sendMessage("");
+    }
+
+    private void renderLine(Player player, MiningRule.DropRule r, double base, double curr, boolean showLuck, String secColor) {
+        String mat = r.material().replace("minecraft:", "").replace("_", " ");
+        String amt = " §8x" + String.valueOf(r.min()) + (r.max() > r.min() ? "-" + String.valueOf(r.max()) : "");
+        
+        String prob;
+        if (!showLuck || Math.abs(curr - base) < 0.0001) {
+            prob = "§7" + formatPercent(base);
+        } else {
+            String color = curr > base ? "§b" : "§7";
+            prob = "§7" + formatPercent(base) + " §8→ " + color + formatPercent(curr);
+        }
+        
+        player.sendMessage("    §8▪ " + hex(secColor) + fancy(mat) + amt + " §8» " + prob);
+    }
+
+    private String hex(String code) {
+        return "§x" + code.substring(1).chars()
+            .mapToObj(c -> "§" + (char)c)
+            .reduce("", (a, b) -> a + b);
+    }
+
+    private String fade(String text, String from, String to, boolean bold) {
+        int r1 = Integer.valueOf(from.substring(1, 3), 16);
+        int g1 = Integer.valueOf(from.substring(3, 5), 16);
+        int b1 = Integer.valueOf(from.substring(5, 7), 16);
+        
+        int r2 = Integer.valueOf(to.substring(1, 3), 16);
+        int g2 = Integer.valueOf(to.substring(3, 5), 16);
+        int b2 = Integer.valueOf(to.substring(5, 7), 16);
+
+        StringBuilder sb = new StringBuilder();
+        int length = text.length();
+        for (int i = 0; i < length; i++) {
+            int r = r1 + (r2 - r1) * i / Math.max(1, length - 1);
+            int g = g1 + (g2 - g1) * i / Math.max(1, length - 1);
+            int b = b1 + (b2 - b1) * i / Math.max(1, length - 1);
+            String hex = String.format("#%02x%02x%02x", r, g, b);
+            
+            sb.append(hex(hex));
+            if (bold) sb.append("§l");
+            sb.append(fancy(String.valueOf(text.charAt(i))));
+        }
+        return sb.toString();
+    }
+
+    private String formatPercent(double val) {
+        if (val >= 10) return String.format("%.1f%%", val);
+        if (val >= 1) return String.format("%.2f%%", val);
+        return String.format("%.4f%%", val);
+    }
+
     private List<ItemStack> resolveDrops(Player player, Block block, MiningRule rule) {
         if (rule.tables().isEmpty()) {
             return new ArrayList<>(block.getDrops(player.getInventory().getItemInMainHand(), player));
         }
+
+        MiningBuffTotals buffs = resolveBuffs(player);
+        double luck = buffs.get("luck", 0.0) + buffs.get("mining_luck", 0.0);
+        double luckMultiplier = 1.0 + (luck / 100.0);
 
         List<ItemStack> drops = new ArrayList<>();
         for (MiningRule.LootTable table : rule.tables()) {
@@ -376,8 +529,14 @@ public final class MiningService {
 
             for (int i = 0; i < rolls; i++) {
                 if (table.strategy() == MiningRule.DropStrategy.POOLED) {
-                    selectWeighted(table.pool()).ifPresent(dropRule -> addDrop(drops, dropRule));
+                    selectWeighted(table.pool(), luck).ifPresent(dropRule -> addDrop(drops, dropRule));
                 } else if (table.strategy() == MiningRule.DropStrategy.INDEPENDENT) {
+                    for (MiningRule.DropRule dropRule : table.pool()) {
+                        if (ThreadLocalRandom.current().nextDouble() <= (dropRule.value() * luckMultiplier)) {
+                            addDrop(drops, dropRule);
+                        }
+                    }
+                } else if (table.strategy() == MiningRule.DropStrategy.STATIC) {
                     for (MiningRule.DropRule dropRule : table.pool()) {
                         if (ThreadLocalRandom.current().nextDouble() <= dropRule.value()) {
                             addDrop(drops, dropRule);
@@ -389,18 +548,42 @@ public final class MiningService {
         return drops;
     }
 
-    private java.util.Optional<MiningRule.DropRule> selectWeighted(List<MiningRule.DropRule> rules) {
-        double totalWeight = rules.stream().mapToDouble(MiningRule.DropRule::value).sum();
-        if (totalWeight <= 0) return java.util.Optional.empty();
+    private java.util.Optional<MiningRule.DropRule> selectWeighted(List<MiningRule.DropRule> rules, double luck) {
+        double rawTotal = 0;
+        for (MiningRule.DropRule r : rules) rawTotal += r.value();
+        if (rawTotal <= 0) return java.util.Optional.empty();
 
-        double roll = ThreadLocalRandom.current().nextDouble() * totalWeight;
+        double luckPercent = luck / 100.0;
+        double totalModified = 0;
+        double[] modifiedWeights = new double[rules.size()];
+
+        for (int i = 0; i < rules.size(); i++) {
+            MiningRule.DropRule rule = rules.get(i);
+            double weight = rule.value();
+            if (weight <= 0) continue;
+
+            double rarityFactor = Math.log10(Math.max(1.0, rawTotal / weight));
+            double boost = 1.0 + (luckPercent * rarityFactor);
+
+            if (rule.material().equalsIgnoreCase("minecraft:air") || rule.material().equalsIgnoreCase("air")) {
+                boost = 1.0;
+            }
+
+            modifiedWeights[i] = weight * boost;
+            totalModified += modifiedWeights[i];
+        }
+
+        if (totalModified <= 0) return java.util.Optional.empty();
+
+        double roll = ThreadLocalRandom.current().nextDouble() * totalModified;
         double cumulative = 0;
-        for (MiningRule.DropRule rule : rules) {
-            cumulative += rule.value();
-            if (roll <= cumulative) return java.util.Optional.of(rule);
+        for (int i = 0; i < rules.size(); i++) {
+            cumulative += modifiedWeights[i];
+            if (roll <= cumulative) return java.util.Optional.of(rules.get(i));
         }
         return java.util.Optional.empty();
     }
+
 
     private void addDrop(List<ItemStack> drops, MiningRule.DropRule dropRule) {
         Material mat = Material.matchMaterial(dropRule.material());

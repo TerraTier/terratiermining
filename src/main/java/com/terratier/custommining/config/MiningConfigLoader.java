@@ -223,6 +223,7 @@ public final class MiningConfigLoader {
         
         if (strategyStr.equals("INDEPENDENT") || strategyStr.equals("ROLL_EACH")) strategyStr = "INDEPENDENT";
         else if (strategyStr.equals("WEIGHTED") || strategyStr.equals("PICK_ONE")) strategyStr = "POOLED";
+        else if (strategyStr.equals("STATIC") || strategyStr.equals("FIXED")) strategyStr = "STATIC";
         else if (strategyStr.equals("ALL")) strategyStr = "POOLED";
 
         MiningRule.DropStrategy strategy;
