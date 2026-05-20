@@ -23,7 +23,7 @@ jobs:
       - name: Build with Gradle
         run: |
           chmod +x gradlew
-          ./gradlew shadowJar --no-daemon
+          ./gradlew clean shadowJar --no-daemon
 
       - name: SFTP Deploy to Server.pro
         uses: wlixcc/SFTP-Deploy-Action@v1.2.4
@@ -32,7 +32,10 @@ jobs:
           password: ${{ secrets.SFTP_PASS }}
           server: ${{ secrets.SFTP_HOST }}
           port: ${{ secrets.SFTP_PORT }}
-          local_path: 'build/libs/'
+          # Path to only the shadow jar file
+          local_path: 'build/libs/terratier-custom-mining-*.jar'
           remote_path: 'plugins/'
           sftp_only: true
-          delete_remote_files: false
+          # This helps clean up old versions automatically
+          delete_remote_files: true
+          sftpArgs: '-o BatchMode=yes'

@@ -1,4 +1,4 @@
-# TerraTier Mining (v0.3.0)
+# TerraTier Mining (v0.3.1)
 
 A highly configurable and scalable Paper plugin for custom mining mechanics, including block strength, mining speed, tool tiers, and a robust fortune system.
 
@@ -27,7 +27,7 @@ This project is configured with GitHub Actions for automated deployment to Serve
     ```powershell
     .\gradlew.bat shadowJar
     ```
-    Output: `build/libs/terratier-custom-mining-0.3.0.jar`
+    Output: `build/libs/terratier-custom-mining-0.3.1.jar`
 
 2.  Auto-Deploy: Pushing to `main` or `master` triggers a build and SFTP upload to your configured server. (Requires Repository Secrets).
 
