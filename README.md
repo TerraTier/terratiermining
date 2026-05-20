@@ -29,7 +29,7 @@ This project is configured with GitHub Actions for automated deployment to Serve
     ```
     Output: `build/libs/TerraTierMining.jar`
 
-2.  Auto-Deploy: Pushing to `main` or `master` triggers a build and SFTP upload to your configured server. (Requires Repository Secrets).
+2.  Auto-Deploy: Pushing to `main` triggers a build and SFTP upload to your configured server. (Requires Repository Secrets).
 
 ## Configuration
 
