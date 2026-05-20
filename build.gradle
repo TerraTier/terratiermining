@@ -50,6 +50,11 @@ tasks.register('deployPlugin') {
     }
 }
 
+// Disable standard jar task since we only need the shadowed jar
+tasks.named('jar') {
+    enabled = false
+}
+
 // Make the shadow jar the default artifact for easier deployment
 tasks.named('shadowJar') {
     archiveClassifier.set('')
