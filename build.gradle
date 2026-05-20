@@ -42,7 +42,7 @@ tasks.register('deployPlugin') {
         }
 
         copy {
-            from tasks.named('jar').get().archiveFile
+            from tasks.named('shadowJar').get().archiveFile
             into file(pluginsDir)
         }
 
