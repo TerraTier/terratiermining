@@ -132,13 +132,14 @@ public final class MiningCommand implements CommandExecutor, TabCompleter {
 
     private void showBreakdown(Player player) {
         MiningService service = plugin.miningService();
+        ToolStats tool = service.resolveTool(player);
         MiningBuffTotals buffs = service.resolveBuffs(player);
 
         if (shouldSendLeadingNewline(player)) player.sendMessage("");
         player.sendMessage(fade("MINING STATS BREAKDOWN", "#4facfe", "#00f2fe", true));
         
-        displayAttributeBreakdown(player, buffs, "mining_speed", "Mining Speed", "⚒", plugin.miningConfig().baseMiningSpeed());
-        displayAttributeBreakdown(player, buffs, "fortune", "Fortune", "☘", 0.0);
+        displaySpeedBreakdown(player, tool, buffs);
+        displayAttributeBreakdown(player, buffs, "fortune", "Fortune", "☘", 0.0, "base");
 
         player.sendMessage("");
         
@@ -154,17 +155,49 @@ public final class MiningCommand implements CommandExecutor, TabCompleter {
         player.sendMessage("  " + hex(LABEL) + fancy(label) + " §8» §7" + String.format("%.1f", value) + " " + symbol);
     }
 
-    private void displayAttributeBreakdown(Player player, MiningBuffTotals buffs, String attr, String label, String symbol, double base) {
-        double total = buffs.get(attr, 0.0);
-        if (attr.equals("mining_speed")) {
-            total += base;
-        }
+    private void displaySpeedBreakdown(Player player, ToolStats tool, MiningBuffTotals buffs) {
+        double finalSpeed = tool.speed();
+        String label = "Mining Speed";
+        String symbol = "⚒";
+
+        player.sendMessage("");
+        player.sendMessage("  " + hex(HIGHLIGHT) + fancy(label) + " §8» §7" + String.format("%.1f", finalSpeed) + " " + symbol);
+        
+        // Find the "pure" tool speed by reversing buffs
+        double speedAdd = buffs.getTotalAdd("mining_speed") + buffs.getTotalAdd("speed");
+        double speedMult = buffs.getTotalMultiplier("mining_speed") * buffs.getTotalMultiplier("speed");
+        double pureToolSpeed = (finalSpeed / Math.max(0.001, speedMult)) - speedAdd;
+
+        player.sendMessage("    §8+§7" + String.format("%.1f", pureToolSpeed) + " §8(" + hex(SECONDARY) + fancy(tool.type().displayName()) + "§8)");
+
+        buffs.sourceBreakdown().forEach((type, totals) -> {
+            double add = totals.get("mining_speed", 0.0) + totals.get("speed", 0.0);
+            double mult = totals.get("mining_speed_multiplier", 1.0) * totals.get("speed_multiplier", 1.0);
+            
+            String sourceName = switch (type) {
+                case HELD -> "tools";
+                case OFFHAND -> "off-hand";
+                case ARMOR -> "armors";
+                case INVENTORY -> "inventory";
+            };
+
+            if (add != 0) {
+                player.sendMessage("    §8+§7" + String.format("%.1f", add) + " §8(" + hex(SECONDARY) + fancy(sourceName) + "§8)");
+            }
+            if (mult != 1.0) {
+                player.sendMessage("    §8x§7" + String.format("%.2f", mult) + " §8(" + hex(SECONDARY) + fancy(sourceName) + "§8)");
+            }
+        });
+    }
+
+    private void displayAttributeBreakdown(Player player, MiningBuffTotals buffs, String attr, String label, String symbol, double base, String baseLabel) {
+        double total = buffs.get(attr, 0.0) + base;
 
         player.sendMessage("");
         player.sendMessage("  " + hex(HIGHLIGHT) + fancy(label) + " §8» §7" + String.format("%.1f", total) + " " + symbol);
         
         if (base > 0) {
-            player.sendMessage("    §8+§7" + String.format("%.1f", base) + " §8(" + hex(SECONDARY) + fancy("base") + "§8)");
+            player.sendMessage("    §8+§7" + String.format("%.1f", base) + " §8(" + hex(SECONDARY) + fancy(baseLabel) + "§8)");
         }
 
         buffs.sourceBreakdown().forEach((type, totals) -> {
@@ -176,7 +209,7 @@ public final class MiningCommand implements CommandExecutor, TabCompleter {
                     case ARMOR -> "armors";
                     case INVENTORY -> "inventory";
                 };
-                player.sendMessage("    §8+§7" + String.format("%.1f", val) + " §8(" + hex(SECONDARY) + fancy("from " + sourceName) + "§8)");
+                player.sendMessage("    §8+§7" + String.format("%.1f", val) + " §8(" + hex(SECONDARY) + fancy(sourceName) + "§8)");
             }
         });
     }
