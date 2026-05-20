@@ -186,10 +186,24 @@ public final class MiningConfigLoader {
         
         String regenPlaceholder = entry.getString("regeneration-placeholder", entry.getString("regeneration_placeholder"));
         
-        List<MiningRule.DropRule> customDrops = new ArrayList<>();
+        List<MiningRule.LootTable> tables = new ArrayList<>();
         if (entry.contains("drops")) {
-            for (String rawDrop : entry.getStringList("drops")) {
-                MiningRule.DropRule.fromConfig(rawDrop).ifPresent(customDrops::add);
+            List<?> dropsList = entry.getList("drops");
+            if (dropsList != null && !dropsList.isEmpty() && dropsList.get(0) instanceof Map) {
+                // New format: list of tables
+                for (Map<?, ?> tableMap : entry.getMapList("drops")) {
+                    parseTable(tableMap).ifPresent(tables::add);
+                }
+            } else if (entry.isConfigurationSection("drops")) {
+                // Old format: single table as section
+                parseTable(entry.getConfigurationSection("drops").getValues(false)).ifPresent(tables::add);
+            } else if (entry.isList("drops")) {
+                // Old format: simple list of strings
+                List<MiningRule.DropRule> pool = new ArrayList<>();
+                for (String rawDrop : entry.getStringList("drops")) {
+                    MiningRule.DropRule.fromConfig(rawDrop).ifPresent(pool::add);
+                }
+                tables.add(new MiningRule.LootTable(MiningRule.DropStrategy.POOLED, 1, 1, pool));
             }
         }
         
@@ -200,7 +214,51 @@ public final class MiningConfigLoader {
             autoPickupOverride = entry.getBoolean("auto_pickup");
         }
 
-        blockRules.put(id, new MiningRule(id, strength, requiredTool, minTier, canRegen, regenDelay, regenPlaceholder, customDrops, autoPickupOverride));
+        blockRules.put(id, new MiningRule(id, strength, requiredTool, minTier, canRegen, regenDelay, regenPlaceholder, tables, autoPickupOverride));
+    }
+
+    private java.util.Optional<MiningRule.LootTable> parseTable(Map<?, ?> map) {
+        Object strategyObj = map.get("strategy");
+        String strategyStr = (strategyObj != null ? String.valueOf(strategyObj) : "POOLED").toUpperCase();
+        
+        if (strategyStr.equals("INDEPENDENT") || strategyStr.equals("ROLL_EACH")) strategyStr = "INDEPENDENT";
+        else if (strategyStr.equals("WEIGHTED") || strategyStr.equals("PICK_ONE")) strategyStr = "POOLED";
+        else if (strategyStr.equals("ALL")) strategyStr = "POOLED";
+
+        MiningRule.DropStrategy strategy;
+        try {
+            strategy = MiningRule.DropStrategy.valueOf(strategyStr);
+        } catch (IllegalArgumentException e) {
+            strategy = MiningRule.DropStrategy.POOLED;
+        }
+
+        int minRolls = 1;
+        int maxRolls = 1;
+        Object rollsObj = map.get("rolls");
+        String rollsStr = rollsObj != null ? String.valueOf(rollsObj) : "1";
+        
+        if (rollsStr.contains("-")) {
+            String[] parts = rollsStr.split("-");
+            try {
+                minRolls = Integer.parseInt(parts[0].trim());
+                maxRolls = Integer.parseInt(parts[1].trim());
+            } catch (NumberFormatException ignored) {}
+        } else {
+            try {
+                minRolls = maxRolls = Integer.parseInt(rollsStr);
+            } catch (NumberFormatException ignored) {}
+        }
+
+        List<MiningRule.DropRule> pool = new ArrayList<>();
+        Object poolObj = map.get("pool");
+        if (poolObj instanceof List<?> list) {
+            for (Object item : list) {
+                MiningRule.DropRule.fromConfig(String.valueOf(item)).ifPresent(pool::add);
+            }
+        }
+
+        if (pool.isEmpty()) return java.util.Optional.empty();
+        return java.util.Optional.of(new MiningRule.LootTable(strategy, minRolls, maxRolls, pool));
     }
 
     private void addToolRule(Map<String, ToolRule> toolRules, String rawId, ConfigurationSection entry) {

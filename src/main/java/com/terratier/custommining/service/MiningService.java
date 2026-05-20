@@ -41,10 +41,6 @@ import org.bukkit.scheduler.BukkitTask;
 import org.bukkit.util.RayTraceResult;
 import org.bukkit.util.Vector;
 
-/**
- * Core service for the custom mining system.
- * Orchestrates sessions, speed calculations, and block breaking logic.
- */
 public final class MiningService {
     private static final double TICKS_PER_SECOND = 20.0;
 
@@ -55,6 +51,7 @@ public final class MiningService {
     private final MiningCalculator calculator;
     private final MiningSessionManager sessionManager = new MiningSessionManager();
     private final Map<UUID, Long> placementCooldowns = new ConcurrentHashMap<>();
+    private final Map<BlockKey, Long> breakCooldowns = new ConcurrentHashMap<>();
     private final VanillaMiningSuppressor suppressor;
     private final BlockRegenerationManager regenerationManager;
     private final FortuneManager fortuneManager = new FortuneManager();
@@ -79,6 +76,7 @@ public final class MiningService {
             public void run() {
                 suppressor.tick(MiningService.this.config);
                 tickSessions();
+                breakCooldowns.entrySet().removeIf(entry -> System.currentTimeMillis() - entry.getValue() > 200);
             }
         }.runTaskTimer(plugin, 1L, 1L);
     }
@@ -94,14 +92,13 @@ public final class MiningService {
         if (tickTask != null) tickTask.cancel();
         clearAllSessions();
         placementCooldowns.clear();
+        breakCooldowns.clear();
         for (Player player : Bukkit.getOnlinePlayers()) {
             suppressor.remove(player);
         }
         regenerationManager.shutdown();
         HandlerList.unregisterAll(listener);
     }
-
-    // --- API Methods ---
 
     public ToolStats resolveTool(Player player) {
         return calculator.resolveTool(player, config);
@@ -122,7 +119,6 @@ public final class MiningService {
         MiningRule rule = config.findBlockRule(candidates);
         ToolStats tool = resolveTool(player);
 
-        // Block Section
         player.sendMessage("  §b§lBLOCK §8» §f" + target.getType().name().toLowerCase());
         player.sendMessage("    §8▪ §7Data: §f" + target.getBlockData().getAsString(false));
         player.sendMessage("    §8▪ §7Candidates: §3" + String.join("§8, §3", candidates));
@@ -136,7 +132,6 @@ public final class MiningService {
 
         player.sendMessage("");
 
-        // Tool Section
         player.sendMessage("  §d§lTOOL §8» §f" + tool.id());
         player.sendMessage("    §8▪ §7Type: §f" + tool.type().displayName());
         player.sendMessage("    §8▪ §7Tier: §f" + tool.tier());
@@ -146,35 +141,14 @@ public final class MiningService {
 
     private String fancy(String input) {
         return input.toLowerCase()
-            .replace("a", "ᴀ")
-            .replace("b", "ʙ")
-            .replace("c", "ᴄ")
-            .replace("d", "ᴅ")
-            .replace("e", "ᴇ")
-            .replace("f", "ꜰ")
-            .replace("g", "ɢ")
-            .replace("h", "ʜ")
-            .replace("i", "ɪ")
-            .replace("j", "ᴊ")
-            .replace("k", "ᴋ")
-            .replace("l", "ʟ")
-            .replace("m", "ᴍ")
-            .replace("n", "ɴ")
-            .replace("o", "ᴏ")
-            .replace("p", "ᴘ")
-            .replace("q", "ǫ")
-            .replace("r", "ʀ")
-            .replace("s", "ꜱ")
-            .replace("t", "ᴛ")
-            .replace("u", "ᴜ")
-            .replace("v", "ᴠ")
-            .replace("w", "ᴡ")
-            .replace("x", "x")
-            .replace("y", "ʏ")
-            .replace("z", "ᴢ");
+            .replace("a", "ᴀ").replace("b", "ʙ").replace("c", "ᴄ").replace("d", "ᴅ")
+            .replace("e", "ᴇ").replace("f", "ꜰ").replace("g", "ɢ").replace("h", "ʜ")
+            .replace("i", "ɪ").replace("j", "ᴊ").replace("k", "ᴋ").replace("l", "ʟ")
+            .replace("m", "ᴍ").replace("n", "ɴ").replace("o", "ᴏ").replace("p", "ᴘ")
+            .replace("q", "ǫ").replace("r", "ʀ").replace("s", "ꜱ").replace("t", "ᴛ")
+            .replace("u", "ᴜ").replace("v", "ᴠ").replace("w", "ᴡ").replace("x", "x")
+            .replace("y", "ʏ").replace("z", "ᴢ");
     }
-
-    // --- Event Handlers (Called by MiningListener) ---
 
     public void handleAnimation(PlayerAnimationEvent event) {
         if (!config.enabled() || shouldBypass(event.getPlayer())) return;
@@ -189,6 +163,8 @@ public final class MiningService {
         Block target = rayTraceTarget(player);
         if (target == null) return;
 
+        if (breakCooldowns.containsKey(BlockKey.from(target))) return;
+
         MiningRule rule = config.findBlockRule(blockResolver.candidates(target, config));
         if (rule != null || regenerationManager.isRegenerating(target.getLocation())) {
             sessionManager.startSession(player, target);
@@ -202,6 +178,11 @@ public final class MiningService {
         Player player = event.getPlayer();
         
         if (!isWithinReach(player, block)) return;
+
+        if (breakCooldowns.containsKey(BlockKey.from(block))) {
+            event.setCancelled(true);
+            return;
+        }
 
         boolean isRegen = regenerationManager.isRegenerating(block.getLocation());
         MiningRule rule = config.findBlockRule(blockResolver.candidates(block, config));
@@ -218,9 +199,7 @@ public final class MiningService {
         }
 
         ToolStats tool = resolveTool(player);
-        if (sessionManager.isSessionActive(player.getUniqueId(), block)) {
-            return;
-        }
+        if (sessionManager.isSessionActive(player.getUniqueId(), block)) return;
 
         clearSession(player);
         if (!isRegen && !rule.canHarvest(tool)) {
@@ -296,8 +275,6 @@ public final class MiningService {
         clearSession(event.getPlayer());
     }
 
-    // --- Internal Logic ---
-
     private void tickSessions() {
         Iterator<MiningSession> iterator = sessionManager.getActiveSessions().iterator();
         while (iterator.hasNext()) {
@@ -353,12 +330,13 @@ public final class MiningService {
         MiningRule rule = config.findBlockRule(blockResolver.candidates(block, config));
 
         clearAnimation(player, session);
+        sessionManager.endSession(player);
         sessionManager.markCompleting(player.getUniqueId(), session.blockKey());
+        breakCooldowns.put(session.blockKey(), System.currentTimeMillis());
 
         try {
             if (rule != null) {
                 handleCustomBreak(player, block, originalData, rule);
-                clearSession(player);
             } else if (player.breakBlock(block)) {
                 playBreakEffects(block, originalData);
             }
@@ -385,22 +363,54 @@ public final class MiningService {
     }
 
     private List<ItemStack> resolveDrops(Player player, Block block, MiningRule rule) {
-        if (rule.customDrops().isEmpty()) {
+        if (rule.tables().isEmpty()) {
             return new ArrayList<>(block.getDrops(player.getInventory().getItemInMainHand(), player));
         }
 
         List<ItemStack> drops = new ArrayList<>();
-        for (MiningRule.DropRule dropRule : rule.customDrops()) {
-            Material mat = Material.matchMaterial(dropRule.material());
-            if (mat != null) {
-                int amount = dropRule.min();
-                if (dropRule.max() > dropRule.min()) {
-                    amount = ThreadLocalRandom.current().nextInt(dropRule.min(), dropRule.max() + 1);
+        for (MiningRule.LootTable table : rule.tables()) {
+            int rolls = table.minRolls();
+            if (table.maxRolls() > table.minRolls()) {
+                rolls = ThreadLocalRandom.current().nextInt(table.minRolls(), table.maxRolls() + 1);
+            }
+
+            for (int i = 0; i < rolls; i++) {
+                if (table.strategy() == MiningRule.DropStrategy.POOLED) {
+                    selectWeighted(table.pool()).ifPresent(dropRule -> addDrop(drops, dropRule));
+                } else if (table.strategy() == MiningRule.DropStrategy.INDEPENDENT) {
+                    for (MiningRule.DropRule dropRule : table.pool()) {
+                        if (ThreadLocalRandom.current().nextDouble() <= dropRule.value()) {
+                            addDrop(drops, dropRule);
+                        }
+                    }
                 }
-                if (amount > 0) drops.add(new ItemStack(mat, amount));
             }
         }
         return drops;
+    }
+
+    private java.util.Optional<MiningRule.DropRule> selectWeighted(List<MiningRule.DropRule> rules) {
+        double totalWeight = rules.stream().mapToDouble(MiningRule.DropRule::value).sum();
+        if (totalWeight <= 0) return java.util.Optional.empty();
+
+        double roll = ThreadLocalRandom.current().nextDouble() * totalWeight;
+        double cumulative = 0;
+        for (MiningRule.DropRule rule : rules) {
+            cumulative += rule.value();
+            if (roll <= cumulative) return java.util.Optional.of(rule);
+        }
+        return java.util.Optional.empty();
+    }
+
+    private void addDrop(List<ItemStack> drops, MiningRule.DropRule dropRule) {
+        Material mat = Material.matchMaterial(dropRule.material());
+        if (mat != null) {
+            int amount = dropRule.min();
+            if (dropRule.max() > dropRule.min()) {
+                amount = ThreadLocalRandom.current().nextInt(dropRule.min(), dropRule.max() + 1);
+            }
+            if (amount > 0) drops.add(new ItemStack(mat, amount));
+        }
     }
 
     private void handleDrops(Player player, Location loc, List<ItemStack> drops, boolean autoPickup) {

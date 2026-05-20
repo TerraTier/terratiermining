@@ -44,7 +44,17 @@ blocks:
     strength: 5.0
     tool: any
     min-tier: 0
-    auto-pickup: false
+    can-regenerate: true
+    regeneration-delay: 0
+    drops:
+      - strategy: pooled # 50/50 test
+        pool:
+          - "minecraft:white_wool:1:3"
+          - "minecraft:string:1-3:1"
+      - strategy: independent # Bonus rewards
+        pool:
+          - "minecraft:shears:1:1/10" # 10% chance
+          - "minecraft:mutton:1:50%" # 50% chance
 
   minecraft:coal_ore:
     strength: 25.0
@@ -52,6 +62,13 @@ blocks:
     min-tier: 2
     can-regenerate: true
     regeneration-delay: 600
+    drops:
+      - strategy: pooled
+        pool:
+          - "minecraft:coal:1-2:1"
+      - strategy: independent
+        pool:
+          - "minecraft:diamond:1:1/1000"
 
   minecraft:sponge:
     strength: 10.0
@@ -59,6 +76,15 @@ blocks:
     min-tier: 0
     can-regenerate: true
     regeneration-delay: 60
+    drops:
+      - strategy: pooled
+        pool:
+          - "minecraft:sponge:1:4"
+          - "minecraft:wet_sponge:1:1"
+      - strategy: independent
+        pool:
+          - "minecraft:coal:1:1/2"
+          - "minecraft:diamond:1:1/2"
 
   minecraft:wet_sponge:
     strength: 20.0
@@ -66,6 +92,25 @@ blocks:
     min-tier: 0
     can-regenerate: true
     regeneration-delay: 60
+    drops:
+      - strategy: independent
+        pool:
+          - "minecraft:water_bucket:1:0.5"
+          - "minecraft:bucket:1:0.5"
+
+  minecraft:iron_ore:
+    strength: 50.0
+    tool: pickaxe
+    min-tier: 3
+    drops:
+      - strategy: pooled
+        pool:
+          - "minecraft:raw_iron:1:128"
+          - "minecraft:iron_ingot:1:10"
+          - "minecraft:air:0:5"
+      - strategy: independent
+        pool:
+          - "minecraft:diamond:1:1/5000"
 
   minecraft:sugar_cane:
     strength: 0.5
