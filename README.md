@@ -1,79 +1,42 @@
-# TerraTier Custom Mining
+# TerraTier Mining (v0.3.0)
 
-Standalone Paper plugin for custom block strength, mining speed, and tool tier requirements.
+A highly configurable and scalable Paper plugin for custom mining mechanics, including block strength, mining speed, tool tiers, and a robust fortune system.
 
-## Build
+## 🚀 Key Features
 
-Paper `26.1.2` uses Java 25 class files. The included Gradle wrapper uses Gradle `9.5.1`, so you do not need Maven or a system Gradle install:
+*   **Custom Mining Speed:** Fine-grained control over mining speeds for any tool or block.
+*   **1:1 Fortune System:** Simplified multiplier math (`1 + Fortune Attribute`) for predictable loot scaling.
+*   **Global & Specific Fortunes:** Reserve the `fortune` attribute for all blocks, or map specific fortunes (e.g., `ore_fortune`) to block groups in `fortune.yml`.
+*   **Block Regeneration:** Automatically restore blocks after break with customizable delays and placeholders (e.g., crops stay as baby seeds).
+*   **Seamless Mining:** Proactive session migration and arm-swing detection for a smooth, lag-free experience.
+*   **Aesthetic UI:** Beautifully formatted stats and breakdowns with blue-to-turquoise hex gradients and fancy text.
+*   **Auto-Pickup:** Configurable global and per-block inventory collection.
 
-```powershell
-.\gradlew.bat build
-```
+## 🛠️ Commands
 
-The jar is created at:
+*   `/terramining stats` - View your current mining speed and active fortune.
+*   `/terramining stats breakdown` - Detailed breakdown of all active buffs and their sources.
+*   `/terramining reload` - Refresh configuration and definitions (Requires permission `terratier.mining.admin`).
+*   `/terramining debug [full]` - Technical insights for block/tool IDs and custom block data.
 
-```text
-build/libs/terratier-custom-mining-0.2.0.jar
-```
+## 📦 Build & Deployment
 
-To build and copy the jar straight into a local server's `plugins` folder:
+This project is configured with **GitHub Actions** for automated deployment to Server.pro.
 
-```powershell
-.\gradlew.bat deployPlugin -PserverPluginsDir="C:\path\to\server\plugins"
-```
+1.  **Local Build:** 
+    ```powershell
+    .\gradlew.bat shadowJar
+    ```
+    Output: `build/libs/terratier-custom-mining-0.3.0.jar`
 
-## Install
+2.  **Auto-Deploy:** Pushing to `main` or `master` triggers a build and SFTP upload to your configured server. (Requires Repository Secrets).
 
-Drop the jar into your Paper server's `plugins` folder and restart. The plugin writes its default config to:
+## ⚙️ Configuration
 
-```text
-plugins/TerraTierMining/config.yml
-```
+*   `config.yml`: Main settings, auto-pickup, and default delays.
+*   `fortune.yml`: Map custom attribute IDs to Minecraft blocks for specific fortune types.
+*   `definitions/`: Folder for YAML files defining block and tool rules.
 
-It also writes starter definition files under:
+## 🔗 Integration
 
-```text
-plugins/TerraTierMining/definitions/
-```
-
-These are real `.yml` files and are active out of the box. TerraTier scans every `.yml` and `.yaml` file in the plugin folder and all subfolders, so you can split blocks and tools into whatever layout you prefer.
-
-Config-only changes do not need a jar rebuild. Edit the YAML, then run `/terramining reload`. Java/plugin-code changes still need a new jar and a server restart or plugin reload tool.
-
-By default TerraTier controls every block. Blocks without a rule are blocked until you define them. In this mode TerraTier keeps vanilla `BLOCK_BREAK_SPEED` suppressed for survival players, which prevents the Minecraft client from drawing its own vanilla break cracks over the custom mining progress.
-
-## Commands
-
-```text
-/terramining reload
-/terramining debug
-/terramining debug full
-/terramining speed
-```
-
-`/terramining debug` shows a compact block/tool/result summary. Use `/terramining debug full` when lining up CraftEngine-backed blocks and tools because it includes candidate ids and block-data.
-
-For config examples and balancing notes, see [CUSTOMIZATION_AND_USAGE.md](CUSTOMIZATION_AND_USAGE.md).
-
-## CraftEngine Notes
-
-TerraTier does not hard-depend on CraftEngine. It can still match custom items through:
-
-- Persistent data keys such as `craftengine:id`.
-- The item's `item_model`.
-- `material#custom_model_data`, such as `minecraft:paper#1001`.
-- Vanilla material id.
-
-For custom mining-speed attributes on CraftEngine items, put TerraTier data under CraftEngine `data.pdc`:
-
-```yml
-items:
-  terratier:mining_chestplate:
-    material: leather_chestplate
-    data:
-      pdc:
-        terratier:item_id: terratier:mining_chestplate
-        terratier:attributes: '[{"attribute":"mining_speed","value":10,"slot":"chest","source":"equipped"}]'
-```
-
-For custom blocks backed by vanilla block states, add entries in any TerraTier YAML file using the block-data string from `/terramining debug full`.
+TerraTier Mining integrates seamlessly with **CraftEngine**. Use the custom `terratier:attributes` PDC key on items to apply `mining_speed` and `fortune` attributes via the [TerraTier Item Editor](https://github.com/TerraTier/terratier-item-editor).
