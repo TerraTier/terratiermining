@@ -1,5 +1,5 @@
 name: TerraTierMining
-version: 0.3.1
+version: 0.3.2
 main: com.terratier.custommining.TerraTierMiningPlugin
 api-version: "26.1"
 author: TerraTier

@@ -38,27 +38,42 @@ public record MiningRule(
         public static Optional<DropRule> fromConfig(String input) {
             if (input == null || input.isBlank()) return Optional.empty();
             
-            String[] parts = input.split(":");
-            String mat = parts[0].trim();
-            int min = 1;
-            int max = 1;
+            int lastColon = input.lastIndexOf(':');
+            if (lastColon == -1) {
+                return Optional.of(new DropRule(input.trim(), 1, 1));
+            }
 
-            if (parts.length > 1) {
-                String range = parts[1].trim();
-                if (range.contains("-")) {
-                    String[] rangeParts = range.split("-");
+            String matPart = input.substring(0, lastColon).trim();
+            String rangePart = input.substring(lastColon + 1).trim();
+
+            if (rangePart.contains("-") || isInteger(rangePart)) {
+                int min = 1;
+                int max = 1;
+                if (rangePart.contains("-")) {
+                    String[] rangeParts = rangePart.split("-");
                     try {
                         min = Integer.parseInt(rangeParts[0].trim());
                         max = Integer.parseInt(rangeParts[1].trim());
+                        return Optional.of(new DropRule(matPart, min, max));
                     } catch (NumberFormatException ignored) {}
                 } else {
                     try {
-                        min = max = Integer.parseInt(range);
+                        min = max = Integer.parseInt(rangePart);
+                        return Optional.of(new DropRule(matPart, min, max));
                     } catch (NumberFormatException ignored) {}
                 }
             }
             
-            return Optional.of(new DropRule(mat, min, max));
+            return Optional.of(new DropRule(input.trim(), 1, 1));
+        }
+
+        private static boolean isInteger(String s) {
+            try {
+                Integer.parseInt(s);
+                return true;
+            } catch (NumberFormatException e) {
+                return false;
+            }
         }
     }
 }

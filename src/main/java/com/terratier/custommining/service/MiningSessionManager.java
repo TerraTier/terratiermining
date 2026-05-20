@@ -41,7 +41,7 @@ public final class MiningSessionManager {
     }
 
     public Collection<MiningSession> getActiveSessions() {
-        return Collections.unmodifiableCollection(sessions.values());
+        return sessions.values();
     }
 
     public void clearAll() {
