@@ -55,7 +55,8 @@ tasks.named('jar') {
     enabled = false
 }
 
-// Make the shadow jar the default artifact for easier deployment
+// Make the shadow jar the default artifact with a static name for easy deployment
 tasks.named('shadowJar') {
     archiveClassifier.set('')
+    archiveFileName.set("TerraTierMining.jar")
 }

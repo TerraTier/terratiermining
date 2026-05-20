@@ -32,10 +32,8 @@ jobs:
           password: ${{ secrets.SFTP_PASS }}
           server: ${{ secrets.SFTP_HOST }}
           port: ${{ secrets.SFTP_PORT }}
-          # Path to only the shadow jar file
-          local_path: 'build/libs/terratier-custom-mining-*.jar'
+          # Use static name for automatic overwriting
+          local_path: 'build/libs/TerraTierMining.jar'
           remote_path: 'plugins/'
           sftp_only: true
-          # This helps clean up old versions automatically
-          delete_remote_files: true
-          sftpArgs: '-o BatchMode=yes'
+          delete_remote_files: false

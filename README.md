@@ -27,7 +27,7 @@ This project is configured with GitHub Actions for automated deployment to Serve
     ```powershell
     .\gradlew.bat shadowJar
     ```
-    Output: `build/libs/terratier-custom-mining-0.3.1.jar`
+    Output: `build/libs/TerraTierMining.jar`
 
 2.  Auto-Deploy: Pushing to `main` or `master` triggers a build and SFTP upload to your configured server. (Requires Repository Secrets).
 
