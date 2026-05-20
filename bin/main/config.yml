@@ -1,0 +1,36 @@
+settings:
+  enabled: true
+
+  # false means TerraTier controls every block. Blocks without a rule are
+  # blocked until you define them in a YAML file.
+  control-configured-blocks-only: false
+
+  # Creative and spectator players keep vanilla behavior.
+  bypass-creative: true
+
+  # Sends a temporary BLOCK_BREAK_SPEED suppression while players look at
+  # TerraTier-controlled blocks. This prevents vanilla client crack flicker.
+  suppress-vanilla-mining: true
+
+  # Automatically put mined items into player inventory.
+  auto-pickup: true
+
+  # Empty hands and unconfigured tools use this speed unless the player's
+  # BLOCK_BREAK_SPEED attribute is higher.
+  base-mining-speed: 1.0
+
+  max-mining-distance: 7.0
+
+  # Checked in order before item_model/custom_model_data/material fallbacks.
+  custom-item-pdc-keys:
+    - craftengine:id
+    - craftengine:item_id
+    - craftengine:custom_item_id
+    - terratier:item_id
+    - lowclicker:item_id
+
+# Highly customizable fortune system.
+# Map custom attribute IDs to lists of blocks they affect.
+# You can use the dedicated 'fortune.yml' file for cleaner management.
+# The 'fortune' attribute is GLOBAL and works on everything by default.
+fortune-mappings: {}
