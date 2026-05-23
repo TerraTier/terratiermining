@@ -9,6 +9,15 @@
 #         terratier:item_id: terratier:mining_chestplate
 #         terratier:attributes: '[{"attribute":"mining_speed","value":10,"slot":"chest","source":"equipped"}]'
 #
+# Tools can set their harvest tier the same way:
+#
+# items:
+#   terratier:copper_pickaxe:
+#     data:
+#       pdc:
+#         terratier:item_id: terratier:copper_pickaxe
+#         terratier:attributes: '[{"attribute":"tier","value":2}]'
+#
 # Use this file only when you want to keep the CraftEngine item YAML untouched.
 # TerraTier matches these entries against item ids resolved from PDC, item_model,
 # custom model data, and vanilla material fallbacks.

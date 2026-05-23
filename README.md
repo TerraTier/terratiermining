@@ -39,4 +39,4 @@ This project is configured with GitHub Actions for automated deployment to Serve
 
 ## Integration
 
-TerraTier Mining integrates seamlessly with CraftEngine. Use the custom `terratier:attributes` PDC key on items to apply `mining_speed` and `fortune` attributes via the [TerraTier Item Editor](https://github.com/TerraTier/terratier-item-editor).
+TerraTier Mining integrates seamlessly with CraftEngine. Use the custom `terratier:attributes` PDC key on items to apply `mining_speed`, `fortune`, and held-tool `tier` attributes via the [TerraTier Item Editor](https://github.com/TerraTier/terratier-item-editor). For example, `terratier:attributes: '[{"attribute":"tier","value":3}]'` makes that tool harvest blocks with `min-tier: 3` or lower.
