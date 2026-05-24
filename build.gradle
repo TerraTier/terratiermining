@@ -4,11 +4,11 @@ plugins {
 }
 
 group = 'com.terratier'
-version = '0.3.0'
-description = 'Configurable TerraTier block strength, mining speed, and tool tier mechanics for Paper.'
+version = '0.4.0'
+description = 'Configurable TerraTier block strength, mining speed, tool tier, and TerraTierStats bridge mechanics for Paper.'
 
 base {
-    archivesName = 'terratier-custom-mining'
+    archivesName = 'terratiermining'
 }
 
 java {
@@ -19,7 +19,7 @@ java {
 
 dependencies {
     compileOnly 'io.papermc.paper:paper-api:26.1.2.build.64-stable'
-    implementation 'com.google.code.gson:gson:2.10.1'
+    compileOnly 'com.terratier:terratierstats:0.1.0'
 }
 
 tasks.withType(JavaCompile).configureEach {
@@ -30,7 +30,7 @@ tasks.withType(JavaCompile).configureEach {
 tasks.register('deployPlugin') {
     group = 'build'
     description = 'Builds the plugin jar and copies it to a Paper server plugins folder.'
-    dependsOn tasks.named('jar')
+    dependsOn tasks.named('shadowJar')
 
     doLast {
         def pluginsDir = providers.gradleProperty('serverPluginsDir')
@@ -59,4 +59,8 @@ tasks.named('jar') {
 tasks.named('shadowJar') {
     archiveClassifier.set('')
     archiveFileName.set("TerraTierMining.jar")
+}
+
+tasks.named('build') {
+    dependsOn tasks.named('shadowJar')
 }

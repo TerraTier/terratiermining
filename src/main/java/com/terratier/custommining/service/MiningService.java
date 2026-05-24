@@ -1,6 +1,5 @@
 package com.terratier.custommining.service;
 
-import com.terratier.custommining.config.ItemAttributesConfig;
 import com.terratier.custommining.config.MiningConfig;
 import com.terratier.custommining.config.MiningRule;
 import com.terratier.custommining.listener.MiningListener;
@@ -8,6 +7,7 @@ import com.terratier.custommining.model.BlockKey;
 import com.terratier.custommining.model.MiningBuffTotals;
 import com.terratier.custommining.model.MiningSession;
 import com.terratier.custommining.model.ToolStats;
+import com.terratier.stats.api.TerraTierStatsApi;
 import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
@@ -47,7 +47,7 @@ public final class MiningService {
 
     private final Plugin plugin;
     private final BlockIdentityResolver blockResolver = new BlockIdentityResolver();
-    private final ToolIdentityResolver toolResolver = new ToolIdentityResolver();
+    private final ToolIdentityResolver toolResolver;
     private final MiningBuffResolver buffResolver;
     private final MiningCalculator calculator;
     private final MiningSessionManager sessionManager = new MiningSessionManager();
@@ -61,10 +61,11 @@ public final class MiningService {
     private final BukkitTask tickTask;
     private MiningConfig config;
 
-    public MiningService(Plugin plugin, MiningConfig config, ItemAttributesConfig itemAttributesConfig) {
+    public MiningService(Plugin plugin, MiningConfig config, TerraTierStatsApi statsApi) {
         this.plugin = plugin;
         this.config = config;
-        this.buffResolver = new MiningBuffResolver(toolResolver, plugin, itemAttributesConfig);
+        this.toolResolver = new ToolIdentityResolver(statsApi);
+        this.buffResolver = new MiningBuffResolver(toolResolver, statsApi);
         this.suppressor = new VanillaMiningSuppressor(plugin, blockResolver);
         this.calculator = new MiningCalculator(toolResolver, buffResolver, suppressor.getKey());
         this.regenerationManager = new BlockRegenerationManager(plugin);
@@ -83,9 +84,8 @@ public final class MiningService {
         }.runTaskTimer(plugin, 1L, 1L);
     }
 
-    public void updateConfig(MiningConfig config, ItemAttributesConfig itemAttributesConfig) {
+    public void updateConfig(MiningConfig config) {
         this.config = config;
-        this.buffResolver.updateItemAttributesConfig(itemAttributesConfig);
         this.fortuneManager.updateMappings(config.fortuneMappings());
         clearAllSessions();
     }

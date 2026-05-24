@@ -1,9 +1,11 @@
 name: TerraTierMining
-version: 0.3.0
+version: 0.4.0
 main: com.terratier.custommining.TerraTierMiningPlugin
 api-version: "26.1"
 author: TerraTier
-description: Configurable TerraTier block strength, mining speed, and tool tier mechanics.
+description: Configurable TerraTier block strength, mining speed, tool tier, and TerraTierStats bridge mechanics.
+depend:
+  - TerraTierStats
 commands:
   terramining:
     description: Reload or debug TerraTier custom mining.

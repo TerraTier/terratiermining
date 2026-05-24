@@ -25,6 +25,7 @@ settings:
 
   max-mining-distance: 7.0
 
+  # Used by mining to match item definitions and TerraTierStats item overrides.
   # Checked in order before item_model/custom_model_data/material fallbacks.
   custom-item-pdc-keys:
     - craftengine:id

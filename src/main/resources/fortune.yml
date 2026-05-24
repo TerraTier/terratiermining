@@ -1,8 +1,8 @@
 # Highly customizable fortune system.
-# Map custom attribute IDs to lists of blocks they affect.
-# These work with the 'terratier:attributes' PDC on items.
+# Map custom stat IDs to lists of blocks they affect.
+# These stats are resolved through TerraTierStats from item PDC/config.
 #
-# The 'fortune' attribute ID is reserved as a GLOBAL multiplier and works 
+# The 'fortune' stat ID is reserved as a GLOBAL multiplier and works 
 # on all blocks controlled by this plugin automatically.
 
 fortune-mappings:

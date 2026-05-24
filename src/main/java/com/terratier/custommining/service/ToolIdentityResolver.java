@@ -1,15 +1,13 @@
 package com.terratier.custommining.service;
 
-import com.google.gson.JsonArray;
-import com.google.gson.JsonElement;
-import com.google.gson.JsonObject;
-import com.google.gson.JsonParser;
-import com.google.gson.JsonSyntaxException;
 import com.terratier.custommining.config.MiningConfig;
 import com.terratier.custommining.config.ToolRule;
 import com.terratier.custommining.model.ToolStats;
 import com.terratier.custommining.model.ToolType;
 import com.terratier.custommining.util.Ids;
+import com.terratier.stats.api.StatSourceType;
+import com.terratier.stats.api.StatTotals;
+import com.terratier.stats.api.TerraTierStatsApi;
 import java.util.ArrayList;
 import java.util.LinkedHashSet;
 import java.util.List;
@@ -17,15 +15,18 @@ import java.util.Locale;
 import java.util.Set;
 import org.bukkit.Material;
 import org.bukkit.NamespacedKey;
+import org.bukkit.inventory.EquipmentSlot;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.meta.ItemMeta;
 import org.bukkit.persistence.PersistentDataContainer;
 import org.bukkit.persistence.PersistentDataType;
 
 public final class ToolIdentityResolver {
-    private static final NamespacedKey ATTRIBUTES_KEY = NamespacedKey.fromString("terratier:attributes");
-    private static final NamespacedKey LEGACY_ATTRIBUTES_JSON_KEY = NamespacedKey.fromString("terratier:attributes_json");
-    private static final NamespacedKey TIER_KEY = NamespacedKey.fromString("terratier:tier");
+    private final TerraTierStatsApi statsApi;
+
+    public ToolIdentityResolver(TerraTierStatsApi statsApi) {
+        this.statsApi = statsApi;
+    }
 
     public List<String> candidates(ItemStack item, MiningConfig config) {
         Set<String> ids = new LinkedHashSet<>();
@@ -70,7 +71,7 @@ public final class ToolIdentityResolver {
         double speed = Math.max(config.baseMiningSpeed(), attributeSpeed);
         String id = candidateIds.isEmpty() ? "hand" : candidateIds.get(0);
         String source = "attribute/base";
-        Integer pdcTier = readPdcTier(item);
+        Integer pdcTier = readStatTier(item, candidateIds);
 
         if (rule != null) {
             id = rule.id();
@@ -143,127 +144,18 @@ public final class ToolIdentityResolver {
         return 0;
     }
 
-    private Integer readPdcTier(ItemStack item) {
-        if (item == null || item.getType().isAir() || !item.hasItemMeta()) {
+    private Integer readStatTier(ItemStack item, List<String> candidateIds) {
+        if (statsApi == null || item == null || item.getType().isAir()) {
             return null;
         }
 
-        ItemMeta meta = item.getItemMeta();
-        PersistentDataContainer data = meta.getPersistentDataContainer();
-
-        Integer directTier = readInteger(data, TIER_KEY);
-        if (directTier != null) {
-            return directTier;
-        }
-
-        String json = data.get(ATTRIBUTES_KEY, PersistentDataType.STRING);
-        if (json == null || json.isBlank()) {
-            json = data.get(LEGACY_ATTRIBUTES_JSON_KEY, PersistentDataType.STRING);
-        }
-        if (json == null || json.isBlank()) {
+        StatTotals totals = statsApi.aggregate(
+            statsApi.resolveItemStats(item, candidateIds, StatSourceType.HELD, EquipmentSlot.HAND)
+        );
+        double tier = totals.get("tier", Double.NaN);
+        if (Double.isNaN(tier)) {
             return null;
         }
-
-        try {
-            JsonElement root = JsonParser.parseString(json);
-            JsonArray entries = new JsonArray();
-            if (root.isJsonArray()) {
-                entries = root.getAsJsonArray();
-            } else if (root.isJsonObject()) {
-                entries.add(root.getAsJsonObject());
-            } else {
-                return null;
-            }
-
-            for (JsonElement entry : entries) {
-                if (!entry.isJsonObject()) {
-                    continue;
-                }
-
-                Integer tier = parseTierAttribute(entry.getAsJsonObject());
-                if (tier != null) {
-                    return tier;
-                }
-            }
-        } catch (JsonSyntaxException ignored) {
-            return null;
-        }
-
-        return null;
-    }
-
-    private Integer parseTierAttribute(JsonObject object) {
-        String attribute = firstString(object, "attribute", "id", "key", "name");
-        if (!"tier".equals(Ids.normalizeAttribute(attribute))) {
-            return null;
-        }
-
-        Double value = firstNumber(object, "value", "amount", "modifier");
-        if (value == null) {
-            return null;
-        }
-
-        return Math.max(0, value.intValue());
-    }
-
-    private Integer readInteger(PersistentDataContainer data, NamespacedKey key) {
-        if (key == null) {
-            return null;
-        }
-
-        Integer intValue = data.get(key, PersistentDataType.INTEGER);
-        if (intValue != null) {
-            return Math.max(0, intValue);
-        }
-        Long longValue = data.get(key, PersistentDataType.LONG);
-        if (longValue != null) {
-            return Math.max(0, longValue.intValue());
-        }
-        Double doubleValue = data.get(key, PersistentDataType.DOUBLE);
-        if (doubleValue != null) {
-            return Math.max(0, doubleValue.intValue());
-        }
-        Float floatValue = data.get(key, PersistentDataType.FLOAT);
-        if (floatValue != null) {
-            return Math.max(0, floatValue.intValue());
-        }
-        String stringValue = data.get(key, PersistentDataType.STRING);
-        if (stringValue != null) {
-            try {
-                return Math.max(0, Integer.parseInt(stringValue.trim()));
-            } catch (NumberFormatException ignored) {
-                return null;
-            }
-        }
-        return null;
-    }
-
-    private static String firstString(JsonObject object, String... keys) {
-        for (String key : keys) {
-            JsonElement value = object.get(key);
-            if (value == null || value.isJsonNull()) {
-                continue;
-            }
-            if (value.isJsonArray() && !value.getAsJsonArray().isEmpty()) {
-                return value.getAsJsonArray().get(0).getAsString();
-            }
-            return value.getAsString();
-        }
-        return null;
-    }
-
-    private static Double firstNumber(JsonObject object, String... keys) {
-        for (String key : keys) {
-            JsonElement value = object.get(key);
-            if (value == null || value.isJsonNull()) {
-                continue;
-            }
-            try {
-                return value.getAsDouble();
-            } catch (NumberFormatException ignored) {
-                return null;
-            }
-        }
-        return null;
+        return Math.max(0, (int) tier);
     }
 }

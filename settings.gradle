@@ -16,4 +16,6 @@ dependencyResolutionManagement {
     }
 }
 
+includeBuild('../terratierstats')
+
 rootProject.name = 'terratier-custom-mining'
